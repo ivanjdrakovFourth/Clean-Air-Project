@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Find the Bulgarian city with the lowest historical air pollution, using real EEA measurements stored locally.">
+  <title>Clean Air Finder &mdash; a clearer place to call home</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#search">Skip to comparison</a>
+  <header class="site-header shell">
+    <a class="brand" href="/" aria-label="Clean Air Finder home">
+      <span class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 32 32"><path d="M25 6C12 4 5 10 7 20c9 4 18-2 18-14Z"/><path d="M7 26 21 12"/></svg>
+      </span>
+      <span>clean air<span class="brand-light"> finder</span></span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#methodology">How it works</a>
+      <a href="/docs">API</a>
+      {% if settings.options.monitoring.enabled %}
+      <a href="http://127.0.0.1:{{ settings.options.monitoring.port }}/" target="_blank" rel="noopener">Monitoring <span aria-hidden="true">&nearr;</span></a>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="small-dot"></span> REAL MEASUREMENTS. A CLEARER PICTURE.</p>
+        <h1>A little more clarity.<br>A little <span>cleaner air.</span></h1>
+        <p class="hero-description">Explore historical air quality across Bulgaria and find the least polluted city among those with enough measurements. Real data, transparent comparisons, no guesswork.</p>
+        <div class="hero-facts"><span>Public EEA data</span><span>Stored on your computer</span><span>No account needed</span></div>
+      </div>
+      <div class="landscape" aria-hidden="true">
+        <div class="sun"></div>
+        <svg viewBox="0 0 420 260" role="presentation">
+          <path class="mountain-back" d="M0 220 105 76 182 152 262 40 420 218V260H0Z"/>
+          <path class="mountain-mid" d="M0 218 108 130 204 217 303 121 420 225V260H0Z"/>
+          <path class="mountain-front" d="M0 233Q86 170 194 220T420 205V260H0Z"/>
+          <path class="land-line" d="M18 230Q106 187 194 228T406 219"/>
+        </svg>
+        <span class="landscape-caption">BULGARIA, WITH A FRESH PERSPECTIVE</span>
+      </div>
+    </section>
+
+    <section id="collection-panel" class="collection-panel{% if snapshot.source_stale or (snapshot.collection and snapshot.collection.status == 'failed') %} attention{% endif %}" data-ready="{{ 'true' if snapshot.ready else 'false' }}" aria-live="polite">
+      <div class="status-dot{% if not snapshot.ready %} pending{% endif %}"></div>
+      <div>
+        <strong id="collection-title">{% if snapshot.ready %}Your local history is ready{% else %}Preparing your real-data history{% endif %}</strong>
+        <p id="collection-message">
+          {% if not snapshot.collection_enabled %}Automatic updates are disabled. {% if snapshot.ready %}Using your stored history.{% else %}Enable collection in config\settings.toml or run the sync command to import real history.{% endif %}{% if snapshot.collection and snapshot.collection.status == 'failed' %} Last collection failed: {{ snapshot.collection.message }}{% endif %}{% elif snapshot.collection %}{{ snapshot.collection.message }}{% else %}The first collection will begin shortly.{% endif %}
+          {% if snapshot.source_stale %} The newest stored measurement is stale.{% endif %}
+          {% if snapshot.ready %} Last successful import: {{ snapshot.last_success | utc }}.{% endif %}
+        </p>
+      </div>
+      <span class="history-label">{% if snapshot.available_start %}{{ snapshot.available_start }} &mdash; {{ snapshot.available_end }} <b>UTC</b>{% else %}At least 12 months requested{% endif %}</span>
+    </section>
+
+    <section class="search-card" id="search" aria-labelledby="search-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">MAKE A COMPARISON</p><h2 id="search-title">Where was the air cleanest?</h2></div>
+        <span class="subtle-tag">Historical UTC days</span>
+      </div>
+      <form id="search-form" action="/" method="get">
+        <div class="form-grid">
+          <div class="field"><label for="start">From</label><input id="start" name="start" type="date" value="{{ values.start }}" min="{{ snapshot.available_start or '' }}" max="{{ snapshot.available_end or '' }}" required></div>
+          <div class="field"><label for="end">To <span class="label-note">(inclusive)</span></label><input id="end" name="end" type="date" value="{{ values.end }}" min="{{ snapshot.available_start or '' }}" max="{{ snapshot.available_end or '' }}" required></div>
+          <div class="field"><label for="pollutant">Compare by</label><select id="pollutant" name="pollutant"><option value="PM2.5"{% if values.pollutant == 'PM2.5' %} selected{% endif %}>PM2.5 &middot; fine particles</option><option value="PM10"{% if values.pollutant == 'PM10' %} selected{% endif %}>PM10 &middot; particles</option></select></div>
+          <div class="field"><label for="profile">Daily reference</label><select id="profile" name="profile"><option value="who_2021"{% if values.profile == 'who_2021' %} selected{% endif %}>WHO 2021 guidance</option><option value="custom"{% if values.profile == 'custom' %} selected{% endif %}>My custom threshold</option></select></div>
+        </div>
+        <div id="custom-field" class="field custom-field"{% if values.profile != 'custom' %} hidden{% endif %}><label for="threshold">Custom daily reference (&micro;g/m&sup3;)</label><input id="threshold" name="threshold" type="number" min="0" step="any" value="{{ values.threshold or '' }}"{% if values.profile != 'custom' %} disabled{% else %} required{% endif %}><small>This changes daily-reference statistics, not the lowest-average ranking rule.</small></div>
+        <div class="form-footer">
+          <p>Lower average concentration wins. Only stations with sufficient valid data qualify.</p>
+          <button id="search-button" type="submit"{% if not snapshot.ready %} disabled{% endif %}>Find cleaner air <span aria-hidden="true">&rarr;</span></button>
+        </div>
+      </form>
+    </section>
+
+    <div id="results" tabindex="-1" aria-live="polite" aria-busy="false">
+      {% include "results.html" %}
+    </div>
+
+    <section id="methodology" class="methodology" aria-labelledby="method-title">
+      <p class="eyebrow">UNDERSTAND THE ANSWER</p>
+      <h2 id="method-title">An honest comparison, not a black box.</h2>
+      <div class="method-grid">
+        <article><span class="step-number">01</span><h3>Real measurements</h3><p>We collect validated historical and provisional current observations from the European Environment Agency. Searches use your local database, never a live third-party request.</p></article>
+        <article><span class="step-number">02</span><h3>Consistent averages</h3><p>We use matching UTC days. Each qualifying physical station has equal daily weight; each valid day has equal period weight. Missing observations are never turned into zero.</p></article>
+        <article><span class="step-number">03</span><h3>Context that matters</h3><p>We show coverage, excluded cities and daily-reference statistics. City-mapped stations include different station types; this is not a population-weighted exposure estimate.</p></article>
+      </div>
+      <div class="method-note"><strong>A reference, not a safety certificate.</strong> WHO daily guidance is {{ "%g" | format(settings.reference.pm25_daily) }} &micro;g/m&sup3; for PM2.5 and {{ "%g" | format(settings.reference.pm10_daily) }} &micro;g/m&sup3; for PM10, with an annual 99th-percentile convention. Our descriptive city statistics do not establish WHO compliance, legal compliance or an absence of health risk. Annual guidelines are not applied to arbitrary periods.</div>
+    </section>
+  </main>
+  <footer class="site-footer shell"><span>Clean Air Finder <span class="footer-version">v{{ version }}</span></span><span>Data: <a href="https://eeadata.github.io/AQ.Portal/pages/download-data.html" target="_blank" rel="noopener">EEA</a>, &copy; European Commission, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> &middot; UTC &middot; Local-first</span></footer>
+</body>
+</html>

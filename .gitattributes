@@ -1,0 +1,7 @@
+runtime/** -text
+runtime/**/*.exe filter=lfs diff=lfs merge=lfs -text
+runtime/**/*.dll filter=lfs diff=lfs merge=lfs -text
+runtime/**/*.pyd filter=lfs diff=lfs merge=lfs -text
+runtime/**/*.zip filter=lfs diff=lfs merge=lfs -text
+runtime/**/*.lib filter=lfs diff=lfs merge=lfs -text
+var/data/clean_air.sqlite3 filter=lfs diff=lfs merge=lfs -text
