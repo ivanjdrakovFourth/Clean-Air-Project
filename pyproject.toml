@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--basetemp=var\\test-tmp", "-o", "cache_dir=var\\test-cache"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+cache-dir = "var\\ruff-cache"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

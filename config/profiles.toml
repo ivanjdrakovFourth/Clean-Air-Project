@@ -1,0 +1,10 @@
+[who_2021]
+name = "WHO 2021 daily reference"
+version = "2021"
+source = "https://www.who.int/news-room/feature-stories/detail/what-are-the-who-air-quality-guidelines"
+averaging_period = "24-hour"
+unit = "ug/m3"
+pm25_daily = 15.0
+pm10_daily = 45.0
+pm25_annual = 5.0
+pm10_annual = 15.0

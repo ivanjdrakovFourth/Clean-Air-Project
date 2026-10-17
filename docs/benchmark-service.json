@@ -1,0 +1,102 @@
+{
+  "kind": "in-process complete comparison service, real stored data",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "logical_cpus": 22,
+  "python": "3.13.16",
+  "sqlite": "3.50.4",
+  "target_p95_ms": 300,
+  "all_targets_met": true,
+  "results": [
+    {
+      "pollutant": "PM2.5",
+      "period": "one_day",
+      "start": "2026-10-15",
+      "end": "2026-10-15",
+      "iterations": 50,
+      "p50_ms": 5.074,
+      "p95_ms": 7.345,
+      "maximum_ms": 8.287,
+      "target_met": true,
+      "result": {
+        "eligible_cities": 3,
+        "winner": "Sofia"
+      }
+    },
+    {
+      "pollutant": "PM2.5",
+      "period": "thirty_days",
+      "start": "2026-09-16",
+      "end": "2026-10-15",
+      "iterations": 50,
+      "p50_ms": 5.318,
+      "p95_ms": 7.022,
+      "maximum_ms": 7.549,
+      "target_met": true,
+      "result": {
+        "eligible_cities": 3,
+        "winner": "Sofia"
+      }
+    },
+    {
+      "pollutant": "PM2.5",
+      "period": "twelve_months",
+      "start": "2025-10-16",
+      "end": "2026-10-15",
+      "iterations": 50,
+      "p50_ms": 11.928,
+      "p95_ms": 15.672,
+      "maximum_ms": 16.002,
+      "target_met": true,
+      "result": {
+        "eligible_cities": 3,
+        "winner": "Varna"
+      }
+    },
+    {
+      "pollutant": "PM10",
+      "period": "one_day",
+      "start": "2026-10-15",
+      "end": "2026-10-15",
+      "iterations": 50,
+      "p50_ms": 4.913,
+      "p95_ms": 6.792,
+      "maximum_ms": 8.585,
+      "target_met": true,
+      "result": {
+        "eligible_cities": 14,
+        "winner": "Vratsa"
+      }
+    },
+    {
+      "pollutant": "PM10",
+      "period": "thirty_days",
+      "start": "2026-09-16",
+      "end": "2026-10-15",
+      "iterations": 50,
+      "p50_ms": 8.168,
+      "p95_ms": 10.998,
+      "maximum_ms": 13.288,
+      "target_met": true,
+      "result": {
+        "eligible_cities": 14,
+        "winner": "Vratsa"
+      }
+    },
+    {
+      "pollutant": "PM10",
+      "period": "twelve_months",
+      "start": "2025-10-16",
+      "end": "2026-10-15",
+      "iterations": 50,
+      "p50_ms": 43.195,
+      "p95_ms": 51.079,
+      "maximum_ms": 51.823,
+      "target_met": true,
+      "result": {
+        "eligible_cities": 13,
+        "winner": "Vratsa"
+      }
+    }
+  ]
+}

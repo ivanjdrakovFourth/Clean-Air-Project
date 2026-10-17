@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API documentation &mdash; Clean Air Finder</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="site-header shell"><a class="brand" href="/">clean air<span class="brand-light"> finder</span></a><nav><a href="/">Back to comparison</a><a href="/openapi.json">OpenAPI JSON</a></nav></header>
+<main class="shell methodology">
+  <p class="eyebrow">LOCAL API &middot; VERSION {{ version }}</p>
+  <h1>Small API. Clear answers.</h1>
+  <p>All endpoints are read-only, unauthenticated and bound to localhost. This documentation works offline; no external scripts, fonts or styles are required.</p>
+  <section class="search-card">
+    <h2>GET /api/cleanest</h2>
+    <p>Compare eligible cities by their period-average concentration. Both dates are inclusive UTC calendar dates and must be completed historical days.</p>
+    <div class="table-scroll"><table><thead><tr><th>Parameter</th><th>Meaning</th></tr></thead><tbody>
+      <tr><th>start, end</th><td>Required dates, YYYY-MM-DD. Stored history: {{ snapshot.available_start or 'backfill pending' }} to {{ snapshot.available_end or 'backfill pending' }}.</td></tr>
+      <tr><th>pollutant</th><td>PM2.5 (default) or PM10. No automatic substitution.</td></tr>
+      <tr><th>profile</th><td>who_2021 (default) or custom.</td></tr>
+      <tr><th>threshold</th><td>Required only with profile=custom; finite, nonnegative daily concentration in &micro;g/m&sup3;.</td></tr>
+    </tbody></table></div>
+    {% if snapshot.available_start %}<p><a href="/api/cleanest?start={{ snapshot.available_start }}&amp;end={{ snapshot.available_end }}&amp;pollutant=PM10">Try the full stored period for PM10</a></p>{% endif %}
+    <p>A successful response contains <code>winners</code>, ordered <code>rankings</code>, <code>excluded_cities</code>, <code>reference</code>, <code>methodology</code>, a reproducible <code>policy_id</code>, source attribution and warnings. Raw concentrations are not rounded before comparison.</p>
+    <p>Errors use <code>{"error": {"code": "...", "message": "...", "details": ...}}</code>. Status 422 indicates an invalid request, unavailable period or insufficient coverage; status 503 indicates pending initial collection or unavailable local storage. Source outages do not prevent searches of previously imported history.</p>
+  </section>
+  <section class="methodology">
+    <h2>Operations endpoints</h2>
+    <ul>
+      <li><a href="/api/status">GET /api/status</a>: collection progress, available history, freshness and worker state.</li>
+      <li><a href="/health/live">GET /health/live</a>: application liveness.</li>
+      <li><a href="/health/ready">GET /health/ready</a>: 200 after the initial import, otherwise 503.</li>
+      <li><a href="/metrics">GET /metrics</a>: Prometheus metrics for API and collection health.</li>
+      <li><a href="/openapi.json">GET /openapi.json</a>: generated machine-readable API schema.</li>
+    </ul>
+    <p>Daily-reference counts describe city means and do not establish regulatory or WHO compliance. See the main page and the handover documentation for methodology and limitations.</p>
+  </section>
+</main>
+</body>
+</html>

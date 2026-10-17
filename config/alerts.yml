@@ -1,0 +1,31 @@
+groups:
+  - name: clean-air-finder
+    rules:
+      - alert: CleanAirApplicationDown
+        expr: up{job="clean-air-finder"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Clean Air Finder is not responding."
+      - alert: CleanAirCollectionFailed
+        expr: clean_air_collection_healthy == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Collection failed. Stored history remains searchable; inspect var/logs."
+      - alert: CleanAirWorkerStopped
+        expr: clean_air_worker_expected == 1 and clean_air_worker_alive == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Automatic collection is enabled but its worker has stopped."
+      - alert: CleanAirSourceDataStale
+        expr: clean_air_source_age_seconds > clean_air_stale_after_seconds
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The latest stored source measurement is stale."

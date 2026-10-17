@@ -1,0 +1,25 @@
+[app]
+host = "127.0.0.1"
+port = 8000
+timezone = "UTC"
+
+[collection]
+enabled = true
+history_months = 12
+refresh_seconds = 3600
+request_timeout_seconds = 90
+request_attempts = 3
+stale_after_hours = 48
+
+[comparison]
+minimum_hourly_coverage = 0.75
+minimum_period_coverage = 0.90
+default_pollutant = "PM2.5"
+
+[monitoring]
+enabled = true
+port = 9090
+retention_days = 7
+
+[retention]
+active_months = 36
