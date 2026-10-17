@@ -7,7 +7,7 @@ if not exist "%~dp0runtime\python\python.exe" (
 )
 for %%I in ("%~dp0runtime\python\python.exe") do if %%~zI LSS 1024 (
   echo The portable Python runtime has not been fully downloaded.
-  echo Run git lfs pull, or download the complete portable ZIP from GitHub Releases.
+  echo Run git lfs install, then git lfs pull from the project folder.
   pause
   exit /b 1
 )

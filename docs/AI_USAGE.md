@@ -60,6 +60,12 @@ the owner approved replacing the published snapshot to keep `main` at one
 commit. The earlier public snapshot and development milestones remain preserved
 locally, and the existing portable Release remains available.
 
+The owner then requested publication of the complete runnable project at
+[Clean-Air-Repository](https://github.com/lemargina/Clean-Air-Repository). That
+checkout includes the source, bundled runtime, Python packages and database
+snapshot, with large binaries and the database stored through Git LFS. Logs,
+credentials, caches and other transient local state remain excluded.
+
 Synthetic measurements exist only in automated test fixtures. The application
 does not substitute mock data when a source fails.
 

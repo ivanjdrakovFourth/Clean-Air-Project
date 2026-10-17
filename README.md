@@ -3,14 +3,12 @@
 A local, portable Windows application answering: **Which measured Bulgarian city
 had the lowest air pollution over a historical period?**
 
-**Source:** [Clean-Air-Project on GitHub](https://github.com/ivanjdrakovFourth/Clean-Air-Project)  
-**Ready-to-run download:** [Latest portable Windows release](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases/latest)
+**Source:** [Clean-Air-Repository on GitHub](https://github.com/lemargina/Clean-Air-Repository)
 
-The public repository is published as one complete snapshot commit, as requested
-by the project owner. The original development milestones are retained locally
-on a backup branch rather than included in the public branch's history.
-The portable runtime and measurement database are also version-controlled in
-`main`: large binaries and the database use **Git LFS**.
+The repository contains the complete project source, portable runtime, installed
+Python packages and measurement database snapshot. Large binaries and the
+database use **Git LFS**. The original development milestones are retained
+locally on a backup branch rather than included in the public branch's history.
 
 The interface, API, SQLite database, Python runtime, Python packages, monitoring,
 logs and archives all live in this folder. There is no Docker, Node.js, database
@@ -18,9 +16,10 @@ server, cloud account or application login.
 
 ## Start the complete application
 
-1. Extract the complete handover ZIP to a **writable local folder** on 64-bit
-   Windows 10 or 11. Do not run it inside the ZIP, on a network drive or in a
-   folder synchronized while the database is open.
+1. Obtain the [complete Git checkout](#using-the-complete-git-checkout) in a
+   **writable local folder** on 64-bit Windows 10 or 11. If using a handover ZIP,
+   extract it first. Do not run the application inside a ZIP, on a network drive
+   or in a folder synchronized while the database is open.
 2. Double-click **`Start-CleanAir.cmd`**, or run:
 
    ```powershell
@@ -31,9 +30,9 @@ server, cloud account or application login.
 4. Keep the console open while using the app. To stop, double-click
    **[Stop-CleanAir.cmd](Stop-CleanAir.cmd)**, or press **Ctrl+C** in the console.
 
-The handover includes an already imported real-data database. With a fresh,
-empty database, the UI displays the initial backfill progress and does not
-invent a winner before the complete import has succeeded.
+The complete checkout and handover include an already imported real-data
+database. With a fresh, empty database, the UI displays the initial backfill
+progress and does not invent a winner before the complete import has succeeded.
 
 Internet is needed for initial collection and updates, **not for searches or
 the interface**. To deliberately run without contacting the source:
@@ -202,13 +201,13 @@ than claiming national completeness.
 
 ## Using the complete Git checkout
 
-Install Git LFS before cloning so the actual portable binaries and database are
-downloaded instead of small pointer files:
+Install Git and Git LFS before cloning so the actual portable binaries and
+database are downloaded instead of small pointer files:
 
 ```powershell
 git lfs install
-git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
-Set-Location '.\Clean-Air-Project'
+git clone https://github.com/lemargina/Clean-Air-Repository.git
+Set-Location '.\Clean-Air-Repository'
 git lfs pull
 .\Start-CleanAir.cmd
 ```
@@ -218,8 +217,8 @@ repository. Logs, monitoring history, caches, backups and SQLite WAL/SHM files
 remain excluded. Git LFS has separate GitHub storage/bandwidth quotas.
 
 GitHub-generated source archives may contain LFS pointers unless LFS objects are
-included in the repository's archive settings. For a ready-to-run ZIP requiring
-no Git or Git LFS installation, use the portable **Release** download above.
+included in the repository's archive settings. For transfer without Git or
+Git LFS, create the optional handover ZIP described above.
 
 Running collection updates the tracked database locally. Stop the application
 before committing or switching revisions; database changes are not automatically
