@@ -331,6 +331,10 @@ More: [source research](docs/DATA_SOURCES.md), [methodology](docs/METHODOLOGY.md
 [operations](docs/OPERATIONS.md), [licenses](docs/THIRD_PARTY.md),
 [AI usage](docs/AI_USAGE.md) and [verification](docs/VERIFICATION.md).
 
+The repository also preserves the supplied PDF document exports unchanged for
+completeness. They are historical exports, not regenerated version 3 manuals;
+the current Markdown documents and application interface are authoritative.
+
 With more time: obtain a complete licensed direct Bulgarian measurement feed;
 review geographical grouping/station types with domain experts; add external
 on-call delivery; test clean Windows VMs and larger workloads. Separate provider
