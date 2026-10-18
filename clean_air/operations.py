@@ -147,7 +147,8 @@ def make_handover(settings: Settings, include_git: bool = True) -> Path:
         if configured.database.exists():
             snapshot_path = settings.var / "backups" / f"handover-{provider}.sqlite3"
             sanitized_snapshot(
-                configured, snapshot_path, require_complete=provider != "bg_direct",
+                configured, snapshot_path,
+                require_complete=provider != "bg_direct" or settings.options.bg_direct.enabled,
             )
             snapshots[configured.database.name] = snapshot_path
     output = destination / "CleanAirFinder-Windows-x64.zip"

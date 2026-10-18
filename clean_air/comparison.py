@@ -13,6 +13,7 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from .database import connect, get_metadata
+from .provider_store import BACKFILL_KEYS
 from .settings import (
     EEA_DATA_URL,
     POLLUTANTS,
@@ -130,16 +131,16 @@ def _status_single(settings: Settings) -> dict:
             "cities": [row[0] for row in connection.execute("SELECT name FROM cities ORDER BY name")],
             "official_stations": stations,
             "national_metadata_source": NATIONAL_URL,
-            "direct_national_readings_available": False,
+            "direct_national_readings_available": settings.provider == "bg_direct" and complete,
             "measurement_provenance": {
                 "eea": "Bulgarian official measurements delivered by the EEA",
                 "openaq": "Separately collected OpenAQ observations; upstream provider and license are retained per location.",
-                "bg_direct": "Verified Bulgarian-direct archive observations only; no usable live feed is configured.",
+                "bg_direct": "Hourly observations downloaded directly from the Bulgarian agency CSV export, not copied from EEA.",
             }[settings.provider],
             "data_source": settings.provider,
             "backfill_complete": (
-                bool(get_metadata(connection, "openaq_backfill_complete", False))
-                if settings.provider == "openaq" else complete
+                bool(get_metadata(connection, BACKFILL_KEYS[settings.provider], False))
+                if settings.provider in BACKFILL_KEYS else complete
             ),
             "available_pollutants": [
                 name for name, code in POLLUTANTS.items()

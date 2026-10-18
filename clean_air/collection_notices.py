@@ -89,8 +89,9 @@ class CollectionNotices:
                     "SELECT MAX(id) FROM collection_runs WHERE status='completed'"
                 ).fetchone()[0]
                 ready = bool(get_metadata(connection, "initial_import_complete", False))
-                if provider == "openaq":
-                    ready = ready and bool(get_metadata(connection, "openaq_backfill_complete", False))
+                if provider in ("openaq", "bg_direct"):
+                    key = "openaq_backfill_complete" if provider == "openaq" else "bg_direct_backfill_complete"
+                    ready = ready and bool(get_metadata(connection, key, False))
                 latest = get_metadata(connection, "latest_observation")
             name = NAMES[provider]
             if outcome is None:

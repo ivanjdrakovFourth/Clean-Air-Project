@@ -30,6 +30,36 @@ code or an unsupported claim of a licensed independent sensor feed.
 Address whitespace is normalized. A monitor's site is not a measurement at every
 nearby house, and street-wide coverage is not interpolated.
 
+### Working direct route found during the 3.0.1 diagnosis
+
+The map/detail failure did not establish that every national delivery route
+was unavailable. The portal's own report page exposes a working **POST
+`/kav/reports/air/exportcsv/`** form. With `type=1`, station/operator IDs,
+`startDate`, `endDate` and requested component IDs, it returns real hourly CSV
+measurements without an account/API key. `type=2` also returns daily means, but
+those are not substituted for the app's UTC-hour-derived days.
+
+Confirmed actual responses included Varna PM10 daily values 8.09 and 11.46
+ug/m3 for 2026-10-17/18 and a genuine year-long station export. The first
+independent national import stored 43,675 hourly records spanning the requested
+year, rather than copying observations from EEA.
+
+Hourly CSV labels are hour endings, include `24:00`, and align to fixed
+UTC+01:00. A recent 47-hour overlap matched the official hourly series exactly.
+A daylight-saving transition export contained missing and duplicate clock labels;
+the importer excludes the affected source days rather than silently choosing
+one duplicate or assigning guessed daylight-saving folds.
+
+The collector requests all six supported pollutant columns, normalizes CO's
+mg/m3, retains finite source-valid zeros, marks missing/negative values excluded,
+and labels readings preliminary/source-rounded. It persists a station-by-station
+cycle and export cooldown so stopping/restarting does not discard completed
+stations or bypass the portal's three-minute export-button spacing.
+
+Original measurements/agency attribution and station facts are retained.
+Website graphics, JavaScript and other site assets are not redistributed;
+no blanket license for those assets is claimed.
+
 The portal's certificate chain did not validate with the default certifi bundle.
 Windows certificate validation and Python's secure platform certificate context
 could retrieve the metadata. TLS verification was **not** disabled. Runtime
@@ -138,7 +168,7 @@ sites must not be counted twice.
 
 **Stations** and **cities** are geographical views within a selected provider,
 not independent measurement sources. The separate source controls choose EEA,
-OpenAQ, the unavailable Bulgarian-direct feed, or several checked providers.
+OpenAQ, direct national CSV, or several checked providers.
 All historical and current reads use those selected providers' local stores.
 
 Some OpenAQ monitors republish EEA observations. Matched physical-station

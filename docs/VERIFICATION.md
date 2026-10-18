@@ -1,5 +1,28 @@
 # Verification record
 
+## Version 3.0.1 Bulgarian CSV route correction
+
+The map/detail AJAX responses were not a complete test of the national portal's
+delivery options. Its public CSV-export form was verified directly, with TLS
+validation and no account/API key. Genuine hourly data is now collected into
+the separate national database, not copied from EEA.
+
+A full-year first station import stored **43,675** raw hourly records, of which
+**42,550** were valid nonnegative concentrations, spanning 2025-10-18 through
+2026-10-18. The collector reported the remaining 31 stations as pending rather
+than claiming the whole source had finished. Source days with duplicate clock
+labels were excluded and counted. Each export is spaced by at least three
+minutes and saved checkpoints resume after interruption.
+
+**218 automated tests and Ruff passed** after adding the parser, own-store
+ingestion, direct refresh, UI source dispatch and resumable-cycle integration.
+The running app also returned HTTP 200 for a genuine national PM10 latest-hour
+city comparison and HTTP 202 for requesting this source's refresh. City labels
+can use an explicit matching city prefix supplied in both the national station
+name and address when the European metadata has no city mapping.
+The version 3.0.0 artifact and counts below remain historical evidence for that
+released snapshot, not a claim that its old ZIP contains this connector.
+
 ## Version 3 verification
 
 Verified on **2026-10-18 UTC** on the shared Windows 11 development machine.

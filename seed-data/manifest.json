@@ -26,7 +26,7 @@
     }
   },
   "unavailable": {
-    "bg_direct": "No usable direct Bulgarian concentration feed has been verified; no history is fabricated."
+    "bg_direct": "The genuine national CSV connector is enabled in version 3.0.1. Its initial station history is being collected; a complete national seed is not claimed by this earlier EEA/OpenAQ snapshot."
   },
   "credential_notice": "No API credential, personal alert settings or API-quota history is included."
 }

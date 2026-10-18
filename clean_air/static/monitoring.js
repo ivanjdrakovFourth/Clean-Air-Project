@@ -44,8 +44,9 @@ async function loadMonitoring() {
       if (source.bundled_seed) card.append(monitorUI.text("p", `Bundled snapshot: ${monitorUI.time(source.bundled_seed.created)}. ${source.bundled_seed.notice}`, "note"));
       card.append(monitorUI.text("p", `${source.quality_last_24h.records} ${data.health.pollutant} raw records in the last 24h; ${source.quality_last_24h.excluded} source-excluded/missing/negative; ${source.quality_last_24h.future} future-timestamped.`, "note"));
       if (source.id === "openaq") card.append(monitorUI.text("p", `${source.requests_last_hour} application requests in the last hour. ${source.backfill_complete ? "Configured history collected." : "Initial history is not complete."}${source.cooldown_until ? ` Quota cooldown until ${monitorUI.time(source.cooldown_until)}.` : ""}`, "note"));
+      if (source.id === "bg_direct") card.append(monitorUI.text("p", `${source.backfill_complete ? "National station history collected." : "National history is being collected station by station."} Export spacing is at least three minutes.${source.cooldown_until ? ` Next eligible export: ${monitorUI.time(source.cooldown_until)}.` : ""}`, "note"));
       const refresh = monitorUI.text("button", "Request source refresh");
-      refresh.type = "button"; refresh.disabled = source.id === "bg_direct";
+      refresh.type = "button"; refresh.disabled = !source.collection_enabled;
       refresh.addEventListener("click", async () => {
         try { const result = await monitorUI.request(`/api/sources/${source.id}/refresh`, "POST"); monitorUI.message(monitorMessage, result.message); }
         catch (error) { monitorUI.message(monitorMessage, error.message, true); }

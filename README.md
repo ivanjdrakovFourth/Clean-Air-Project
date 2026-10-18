@@ -11,6 +11,8 @@ configurable alerts and light/dark themes.
 **Complete portable download:** [Version 3.0.0 release](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases/tag/v3.0.0).
 Use the prepared Windows ZIP, not GitHub's generic source ZIP, for an
 extract-and-run package without a Git LFS installation.
+The 3.0.1 national-CSV connector fix is in the Git checkout; the older 3.0.0
+ZIP predates that connector.
 
 ## 1. Start and stop
 
@@ -74,7 +76,7 @@ unsent selection.
 |---|---|---|
 | **EEA** | `var\data\clean_air.sqlite3` | Bulgarian official observations reported through the EEA, including validated/provisional history. |
 | **OpenAQ** | `var\data\openaq.sqlite3` | Separately downloaded OpenAQ observations with upstream provider, license and monitor class. Includes permitted reference/community sensors according to configuration. |
-| **Bulgarian direct** | `var\data\bg_direct.sqlite3` | Reserved for genuine direct-source measurements/restored history. The checked government endpoints supplied site metadata but no usable concentration feed, so no fake history is seeded. |
+| **Bulgarian direct** | `var\data\bg_direct.sqlite3` | Genuine hourly CSV exports from the national portal, downloaded independently. Initial station-by-station backfill and its progress are shown explicitly. Broken map/detail AJAX placeholders are not used as measurements. |
 | **Compare selected sources** | Queries each selected store | Separate answer/error panels, top-result comparison and matched-station diagnostics; never a silent blend or fallback. |
 
 Station/city is a **geographical view**, not a source. Selecting OpenAQ never
@@ -104,8 +106,11 @@ seed is merged, not copied over a colleague's live database.
 
 **An OpenAQ key is not needed to search the bundled OpenAQ history.** It is
 needed for future OpenAQ updates on that computer. EEA updates remain anonymous.
-The direct Bulgarian portal is explicitly unavailable as a concentration feed;
-its reserved database is not falsely advertised as populated.
+Version 3.0.1 adds the verified national hourly CSV route. The site's map/detail
+AJAX endpoints remain unusable, but its CSV export supplies real observations.
+The national collector preserves its own station checkpoints and respects the
+portal's three-minute export spacing. Do not confuse ongoing initial backfill
+with a connection failure; Monitoring shows stations completed.
 
 Configure a key through **Monitoring -> OpenAQ credential setup**, or run:
 

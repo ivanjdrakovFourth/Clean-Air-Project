@@ -7,7 +7,7 @@ import sqlite3
 
 from .credentials import key_path
 from .database import connect, get_metadata
-from .provider_store import PROVIDER_NAMES, PROVIDERS, for_provider
+from .provider_store import BACKFILL_KEYS, PROVIDER_NAMES, PROVIDERS, for_provider
 from .settings import POLLUTANTS, Settings, SourceChoice, timestamp_now
 
 LOGGER = logging.getLogger(__name__)
@@ -39,11 +39,8 @@ def _snapshot(settings: Settings, provider: str) -> dict:
     reason = snapshot.get("error")
     if reason:
         pass
-    elif provider == "bg_direct":
-        reason = None if snapshot["ready"] else (
-            "No usable direct Bulgarian measurement feed has been verified. "
-            "Station names are not concentration history. EEA records are not copied here."
-        )
+    elif provider == "bg_direct" and not settings.options.bg_direct.enabled:
+        reason = "National CSV collection is disabled. Any saved direct-source history remains separate and searchable."
     elif provider == "openaq" and not configured_key:
         reason = "OpenAQ live updates need a locally configured API key. Any existing cache remains source-specific and searchable."
     elif not snapshot["ready"]:
@@ -53,9 +50,9 @@ def _snapshot(settings: Settings, provider: str) -> dict:
         reason=reason, credential_configured=configured_key if provider == "openaq" else None,
         collection_enabled=(
             settings.options.collection.enabled
-            and provider != "bg_direct"
             and (provider != "openaq" or settings.options.openaq.enabled)
             and (provider != "openaq" or configured_key)
+            and (provider != "bg_direct" or settings.options.bg_direct.enabled)
         ),
         timezone="UTC",
         bundled_seed=bundled,
@@ -96,7 +93,7 @@ def _single(
     from .comparison import ComparisonError, _compare_single
 
     snapshot = _snapshot(settings, provider) if snapshot is None else snapshot
-    if provider == "bg_direct" and not snapshot["ready"]:
+    if provider == "bg_direct" and not snapshot["ready"] and not settings.options.bg_direct.enabled:
         raise ComparisonError("SOURCE_UNAVAILABLE", snapshot["reason"], 503, snapshot)
     if not snapshot["ready"]:
         raise ComparisonError(
@@ -104,7 +101,7 @@ def _single(
             snapshot["reason"] or "The selected source has no searchable measurements yet.",
             503, snapshot,
         )
-    if provider == "openaq" and search.start is not None and not snapshot.get("backfill_complete"):
+    if provider in BACKFILL_KEYS and search.start is not None and not snapshot.get("backfill_complete"):
         with connect(for_provider(settings, provider).database) as connection:
             windows = get_metadata(connection, "restored_source_windows", [])
         restored = any(
@@ -114,7 +111,7 @@ def _single(
         if not restored and not search.allow_partial_history:
             raise ComparisonError(
                 "SOURCE_BACKFILL_IN_PROGRESS",
-                "OpenAQ's own historical backfill is still running. Historical comparisons wait "
+                f"{PROVIDER_NAMES[provider]}'s own historical backfill is still running. Historical comparisons wait "
                 "for the configured source window to finish unless you explicitly allow partial "
                 "cached history. EEA history is never substituted.",
                 503, snapshot,
@@ -138,22 +135,21 @@ def _single(
             "OpenAQ includes source-labelled reference monitors and potentially low-cost community sensors.",
             "OpenAQ locations whose upstream provider is EEA are not independent confirmation of EEA observations.",
         ])
-        if not snapshot.get("backfill_complete"):
-            result["warnings"].append(
-                "OpenAQ history backfill is incomplete. This comparison covers only currently "
-                "cached eligible locations and can change as other source records arrive."
-            )
-            result["partial_history"] = True
     elif provider == "bg_direct":
         result["source"].update(
-            name="Bulgarian direct-source archived measurements",
+            name="Bulgarian Executive Environment Agency - direct hourly CSV",
             url="https://www.eea.government.bg/kav/",
             station_metadata_url="https://www.eea.government.bg/kav/",
-            license="Original direct-source archive terms",
+            license="Attributed factual national measurements; website assets are not redistributed",
             license_url="https://www.eea.government.bg/",
-            changes="Queried exclusively from the Bulgarian-direct source store.",
+            changes="Downloaded directly from national CSV, mass units normalized, fixed UTC+01 hour-ending labels converted to UTC; duplicate-labelled source days excluded.",
         )
-        result["warnings"].append("No direct Bulgarian live connector is available; this result uses this source's own verified restored history.")
+        result["warnings"].append(
+            "National CSV values are preliminary and source-rounded. They can share the same official monitoring network as EEA; this is a distinct delivery route, not independent instruments."
+        )
+    if provider in BACKFILL_KEYS and not snapshot.get("backfill_complete"):
+        result["warnings"].append("This source's history backfill is incomplete; cached eligible results can change as more station records arrive.")
+        result["partial_history"] = True
     if snapshot.get("collection") and snapshot["collection"]["status"] == "running":
         result["warnings"].append("This source is refreshing; some locations can still have their last committed data.")
     return result
@@ -298,6 +294,6 @@ def compare_sources(settings: Settings, search) -> dict:
             "matched_measurements": pairs,
             "numeric_rule": "Display comparison only: max(0.5 ug/m3, 5% of the larger matched mean). Not a health or measurement-uncertainty threshold.",
             "scope": "Matched physical stations; historical means use exactly shared qualifying days. Time searches compare listed results only.",
-            "independence_notice": "OpenAQ's EEA-supplied locations share the upstream network; agreement is not independent validation.",
+            "independence_notice": "National CSV, EEA and OpenAQ's EEA-supplied locations can share the same official instruments; agreement is not independent validation.",
         },
     }

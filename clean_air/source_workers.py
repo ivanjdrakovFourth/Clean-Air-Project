@@ -4,6 +4,7 @@ import logging
 import os
 import time
 
+from .bulgarian import BulgarianCollector
 from .collection_notices import NAMES, CollectionNotices
 from .collector import Collector
 from .credentials import key_path
@@ -33,6 +34,11 @@ class SourceWorkers:
             )
         elif settings.options.openaq.enabled:
             LOGGER.warning("OpenAQ collection needs a local key; its cached history remains separate and searchable.")
+        if settings.options.bg_direct.enabled:
+            self.collectors["bg_direct"] = BulgarianCollector(
+                for_provider(settings, "bg_direct"),
+                report=lambda result: self.notices.report("bg_direct", result),
+            )
 
     @property
     def thread(self):
@@ -41,10 +47,10 @@ class SourceWorkers:
     def available_sources(self) -> list[dict]:
         sources = []
         for provider in PROVIDERS:
-            if provider == "bg_direct":
-                reason = "No usable direct concentration feed is available. Saved direct-source archives, if any, are not replaced."
-            elif not self.settings.options.collection.enabled:
+            if not self.settings.options.collection.enabled:
                 reason = "Explicit offline mode: no network collection is attempted."
+            elif provider == "bg_direct" and not self.settings.options.bg_direct.enabled:
+                reason = "National CSV collection is disabled in this installation."
             elif provider == "openaq" and not self.settings.options.openaq.enabled:
                 reason = "OpenAQ collection is disabled in this installation."
             elif provider not in self.collectors:
@@ -80,8 +86,8 @@ class SourceWorkers:
             raise ValueError("This installation is in offline mode; start it without --offline before collecting.")
         if provider == "openaq" and not settings.options.openaq.enabled:
             raise ValueError("OpenAQ collection is disabled in this installation.")
-        if provider == "bg_direct":
-            raise ValueError("No verified direct Bulgarian measurement connector is available.")
+        if provider == "bg_direct" and not settings.options.bg_direct.enabled:
+            raise ValueError("National CSV collection is disabled in this installation.")
         if provider not in self.collectors:
             if provider != "openaq" or not (
                 os.environ.get("OPENAQ_API_KEY") or key_path(settings.root).exists()

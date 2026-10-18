@@ -77,6 +77,13 @@ class AlertOptions(StrictModel):
     enabled: bool = True
 
 
+class BulgarianOptions(StrictModel):
+    enabled: bool = False
+    export_interval_seconds: int = Field(default=180, ge=180)
+    exports_per_cycle: int = Field(default=32, ge=1, le=32)
+    revision_days: int = Field(default=7, ge=1, le=30)
+
+
 class Options(StrictModel):
     app: AppOptions = Field(default_factory=AppOptions)
     collection: CollectionOptions = Field(default_factory=CollectionOptions)
@@ -85,6 +92,7 @@ class Options(StrictModel):
     retention: RetentionOptions = Field(default_factory=RetentionOptions)
     sources: SourceOptions = Field(default_factory=SourceOptions)
     openaq: OpenAQOptions = Field(default_factory=OpenAQOptions)
+    bg_direct: BulgarianOptions = Field(default_factory=BulgarianOptions)
     alerts: AlertOptions = Field(default_factory=AlertOptions)
 
     @model_validator(mode="after")

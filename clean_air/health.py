@@ -84,12 +84,17 @@ def source_health(
                 request_count = len(active)
                 if len(active) >= 1900:
                     cooldown = min(active) + 3601
+                if provider == "bg_direct":
+                    last_export = get_metadata(connection, "bg_csv_last_export", 0)
+                    next_export = last_export + settings.options.bg_direct.export_interval_seconds
+                    if next_export > now:
+                        cooldown = next_export
         run = state.get("collection")
         latest = state.get("latest_observation")
         age = max(0, now - latest) / 3600 if latest else None
         if state.get("error"):
             label, tone = "Storage error", "bad"
-        elif provider == "bg_direct" and not state["ready"]:
+        elif provider == "bg_direct" and not state["ready"] and not settings.options.bg_direct.enabled:
             label, tone = "Direct feed not available", "neutral"
         elif provider == "openaq" and not state.get("credential_configured") and not state["ready"]:
             label, tone = "Needs local API key", "waiting"
@@ -105,10 +110,13 @@ def source_health(
         elif quality["records"] and quality["excluded"] / quality["records"] > 0.25:
             label, tone = "Many source-excluded readings in the last day", "waiting"
         elif cooldown:
-            label, tone = "Respecting hourly API allowance", "waiting"
+            label, tone = (
+                "Respecting national CSV export spacing" if provider == "bg_direct"
+                else "Respecting hourly API allowance"
+            ), "waiting"
         elif run and run["status"] in ("failed", "partial"):
             label, tone = "Collection needs attention", "bad"
-        elif provider == "openaq" and not state.get("backfill_complete"):
+        elif provider in ("openaq", "bg_direct") and not state.get("backfill_complete"):
             label, tone = "Collecting historical coverage", "waiting"
         elif not state["ready"]:
             label, tone = "Waiting for initial data", "waiting"
@@ -129,6 +137,7 @@ def source_health(
             "quality_last_24h": quality,
             "bundled_seed": state.get("bundled_seed"),
             "worker_alive": worker_states.get(provider) if worker_states is not None else None,
+            "collection_enabled": state.get("collection_enabled"),
         })
     return {
         "sources": sources, "pollutant": pollutant, "checked_at": now,

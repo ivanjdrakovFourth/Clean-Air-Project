@@ -29,7 +29,7 @@ Logs, credentials, personal alerts and transient state are not tracked.
 The launcher verifies local prerequisites, starts bundled Prometheus and its
 local storage, waits for monitoring readiness, then starts the app, independent
 EEA/OpenAQ workers, alert evaluation and queued maintenance. OpenAQ starts only
-when enabled and a local key exists. The direct feed has no invented collector.
+when enabled and a local key exists. the national source uses its own real CSV collector.
 A workspace file lock prevents a second application or manual writer; source
 locks coordinate in-app data jobs and collectors.
 The browser opens only after the application's live endpoint responds.

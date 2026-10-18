@@ -63,6 +63,12 @@ The map's unlabelled zero placeholders were not imported as measurements.
 See [DATA_SOURCES.md](DATA_SOURCES.md) for actual responses and provenance.
 Measurement attribution remains separate from location attribution.
 
+The 3.0.1 national collector also downloads factual hourly concentrations through
+the agency's own public CSV export, retaining original agency/station attribution
+and explicitly identifying preliminary, source-rounded data. This does not copy
+the website's code, graphics or other protected presentation assets or claim a
+blanket license for them.
+
 ## Guideline facts
 
 Daily and annual reference values are attributed to the

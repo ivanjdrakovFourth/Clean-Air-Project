@@ -1,0 +1,14 @@
+{
+  "version": "3.0.1",
+  "root_cause": "National map/detail AJAX are unusable; the working hourly CSV export had no active collector.",
+  "fixed_route": "https://www.eea.government.bg/kav/reports/air/exportcsv/",
+  "collector_running": true,
+  "national_live_city_http_status": 200,
+  "source_identity": "bg_direct",
+  "station_checkpoints_complete": 4,
+  "station_checkpoints_total": 32,
+  "full_backfill_complete": false,
+  "partial_result_explicitly_labelled": true,
+  "real_imported_source": "direct national CSV, not copied EEA observations",
+  "tests_passed": 218
+}

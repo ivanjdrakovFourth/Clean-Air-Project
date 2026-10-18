@@ -37,8 +37,9 @@ setting. Missing keys, offline mode and unavailable feeds are reported honestly.
 
 The databases are separate: `clean_air.sqlite3` for EEA, `openaq.sqlite3` for
 OpenAQ and `bg_direct.sqlite3` for any genuine direct feed. Choosing a source
-also chooses its historical data. The current direct Bulgarian portal supplies
-station facts but no usable concentration series; the UI says so honestly.
+also chooses its historical data. Version 3.0.1 collects genuine national hourly CSV exports despite the broken
+map/detail AJAX routes. Its initial history is loaded station by station,
+with three-minute export spacing, visible progress and honest partial-cache gating.
 
 The assignment requires 12 months of queryable stored history. Its 36-month
 number is the cold-archive boundary, not an obligation to download three years

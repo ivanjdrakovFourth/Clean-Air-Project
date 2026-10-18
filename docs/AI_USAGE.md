@@ -1,5 +1,18 @@
 # AI usage
 
+## Version 3.0.1 national-route correction
+
+The owner reported that the Bulgarian-direct source could not update.
+Inspection of the official portal confirmed that its map AJAX returns only
+placeholders and its detail AJAX is empty, but following the portal's own
+report/export forms revealed a working hourly CSV endpoint.
+The correction uses that direct export, not observations copied from EEA.
+The first genuine year-long import stored 43,675 hourly records in the separate
+national store. Tests cover CSV parsing, mass units, source isolation,
+station-checkpoint resumption and duplicate clock-label quarantine.
+The collector preserves the portal's three-minute export spacing, so complete
+initial station coverage takes time and is not falsely reported as finished.
+
 ## Version 3 multi-source and operational UI
 
 The owner requested separately retained histories for EEA, OpenAQ and any usable

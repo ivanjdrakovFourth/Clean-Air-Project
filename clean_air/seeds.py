@@ -23,16 +23,21 @@ from .settings import Provider, Settings, months_before, timestamp_now, utc_toda
 from .shutdown_control import workspace_lock
 
 LOGGER = logging.getLogger(__name__)
-SEED_PROVIDERS: tuple[Provider, ...] = ("eea", "openaq")
+SEED_PROVIDERS: tuple[Provider, ...] = ("eea", "openaq", "bg_direct")
 METADATA_KEYS = {
     "initial_import_complete", "openaq_backfill_complete", "history_requested_start",
     "last_success", "latest_observation", "openaq_catalog", "data_provider",
     "metadata_updated", "restored_source_windows",
+    "bg_direct_backfill_complete", "bg_csv_cycle", "bg_csv_time_policy",
 }
 
 
 def shared_metadata(key: str) -> bool:
-    return key in METADATA_KEYS or key.startswith(("station_provider:", "openaq_cursor:"))
+    return key in METADATA_KEYS or key.startswith(("station_provider:", "openaq_cursor:", "bg_csv_cursor:"))
+
+
+def seed_providers(settings: Settings) -> tuple[Provider, ...]:
+    return SEED_PROVIDERS if settings.options.bg_direct.enabled else ("eea", "openaq")
 
 
 def file_digest(path: Path) -> str:
@@ -62,6 +67,9 @@ def verify_complete_history(settings: Settings, path: Path | None = None) -> Non
         if get_metadata(connection, "data_provider") != settings.provider:
             raise RuntimeError("The measurement snapshot belongs to another source.")
         complete = bool(get_metadata(connection, "initial_import_complete", False))
+        if settings.provider == "bg_direct":
+            cycle = get_metadata(connection, "bg_csv_cycle", {})
+            complete = complete and bool(get_metadata(connection, "bg_direct_backfill_complete", False)) and not cycle.get("pending")
         months = (
             settings.options.openaq.history_months or settings.options.collection.history_months
             if settings.provider == "openaq" else settings.options.collection.history_months
@@ -138,7 +146,7 @@ def build_seeds(settings: Settings) -> dict:
         prefix="source-seeds-", dir=settings.var / "tmp",
     ) as temporary_directory:
         temporary = Path(temporary_directory)
-        for provider in SEED_PROVIDERS:
+        for provider in seed_providers(settings):
             source = for_provider(settings, provider)
             output = temporary / f"{provider}.sqlite3"
             entries[provider] = sanitized_snapshot(source, output)
@@ -154,9 +162,7 @@ def build_seeds(settings: Settings) -> dict:
                 shutil.copyfile(path.with_suffix(".gz.sha256"), (archive_folder / path.name).with_suffix(".gz.sha256"))
         manifest = {
             "format": "clean-air-source-seeds-v1", "created": timestamp_now(), "sources": entries,
-            "unavailable": {
-                "bg_direct": "No usable direct Bulgarian concentration feed has been verified; no history is fabricated.",
-            },
+            "unavailable": {} if "bg_direct" in entries else {"bg_direct": "National CSV collection is disabled for this snapshot."},
             "credential_notice": "No API credential, personal alert settings or API-quota history is included.",
         }
         for provider, entry in entries.items():
@@ -225,6 +231,7 @@ def merge_seed(settings: Settings) -> bool:
                 or metadata.get("history_requested_start") != entry["requested_start"]
                 or not metadata.get("initial_import_complete")
                 or (settings.provider == "openaq" and not metadata.get("openaq_backfill_complete"))
+                or (settings.provider == "bg_direct" and not metadata.get("bg_direct_backfill_complete"))
             ):
                 raise RuntimeError("The bundled source history does not match its manifest.")
             conflict = connection.execute(
@@ -287,17 +294,21 @@ def merge_seed(settings: Settings) -> bool:
                     rebuild_station_days(connection, station[0])
                 for row in connection.execute("SELECT * FROM seed.metadata").fetchall():
                     if shared_metadata(row["key"]) and row["key"] not in {
-                        "initial_import_complete", "openaq_backfill_complete", "last_success",
+                        "initial_import_complete", "openaq_backfill_complete", "bg_direct_backfill_complete", "last_success",
                     }:
                         if get_metadata(connection, row["key"], None) is None:
                             set_metadata(connection, row["key"], json.loads(row["value"]))
                 set_metadata(connection, "initial_import_complete", True)
-                months = settings.options.openaq.history_months or settings.options.collection.history_months
+                months = (
+                    settings.options.openaq.history_months or settings.options.collection.history_months
+                    if settings.provider == "openaq" else settings.options.collection.history_months
+                )
                 if (
-                    settings.provider == "openaq" and not existing
+                    settings.provider in ("openaq", "bg_direct") and not existing
                     and entry["requested_start"] <= months_before(utc_today(), months).isoformat()
                 ):
-                    set_metadata(connection, "openaq_backfill_complete", True)
+                    key = "openaq_backfill_complete" if settings.provider == "openaq" else "bg_direct_backfill_complete"
+                    set_metadata(connection, key, True)
                 windows = get_metadata(connection, "restored_source_windows", [])
                 window = {"start": entry["start"], "end": entry["end"]}
                 if window not in windows:

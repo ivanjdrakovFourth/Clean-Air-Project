@@ -25,8 +25,8 @@ Measurement data and station metadata have separate provenance.
 The national map currently returned zero values with empty pollutant and
 timestamp fields. Those are unusable placeholders and are **not measurements**.
 The existing EEA feed already distributes the Bulgarian official observations.
-The UI therefore offers a genuinely separate EEA store, an OpenAQ store and an
-explicitly unavailable direct-national store. It never copies EEA measurements
+The UI therefore offers a genuinely separate EEA store, an OpenAQ store and a
+direct-national CSV store. It never copies EEA measurements
 into a fictitious populated direct feed. Station/city is an aggregation choice
 within the selected source, not another provider.
 
@@ -111,7 +111,7 @@ not two different date cohorts. Display agreement tolerance is the greater of
 uncertainty bound or a health standard. EEA observations republished by OpenAQ
 are explicitly not independent confirmation.
 
-Normal OpenAQ historical searches require completed backfill. Explicit partial
+Normal OpenAQ and national CSV historical searches require completed backfill. Explicit partial
 cache opt-in is labelled, and verified bundled/restored windows remain usable
 without claiming that a larger pending collection has finished.
 

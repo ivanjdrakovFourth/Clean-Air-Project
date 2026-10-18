@@ -11,8 +11,9 @@ PROVIDERS: tuple[Provider, ...] = ("eea", "openaq", "bg_direct")
 PROVIDER_NAMES = {
     "eea": "EEA - Bulgarian official observations",
     "openaq": "OpenAQ - source-labelled monitors and sensors",
-    "bg_direct": "Bulgarian direct portal - measurement feed unavailable",
+    "bg_direct": "Bulgarian national portal - direct CSV observations",
 }
+BACKFILL_KEYS = {"openaq": "openaq_backfill_complete", "bg_direct": "bg_direct_backfill_complete"}
 
 
 def for_provider(settings: Settings, provider: Provider) -> Settings:

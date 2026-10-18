@@ -13,6 +13,7 @@ from pathlib import Path
 import uvicorn
 
 from .archive import archive_old, restore
+from .bulgarian import BulgarianCollector
 from .collector import Collector
 from .comparison import status_snapshot
 from .credentials import save_openaq_key
@@ -114,9 +115,8 @@ def main() -> int:
                 connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         elif args.command == "sync":
             with instance_lock(settings):
-                if settings.provider == "bg_direct":
-                    raise ValueError("No usable direct Bulgarian measurement connector has been verified.")
-                collector = OpenAQCollector(settings) if settings.provider == "openaq" else Collector(settings)
+                factories = {"eea": Collector, "openaq": OpenAQCollector, "bg_direct": BulgarianCollector}
+                collector = factories[settings.provider](settings)
                 print(json.dumps(collector.sync_once(force=args.force), indent=2))
         elif args.command == "status":
             print(json.dumps(status_snapshot(settings, settings.provider), indent=2))

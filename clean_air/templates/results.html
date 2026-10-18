@@ -17,7 +17,7 @@
 {% set location_period = result.period.mode == 'historical' and result.target == 'locations' %}
 <section class="results-section" aria-labelledby="answer-title">
   <div class="results-intro"><p class="eyebrow">{{ result.source_name }} &middot; {{ result.pollutant }}</p><span>{{ result.period.label }}</span></div>
-  {% if result.partial_history %}<p class="status-message waiting">OpenAQ historical collection is incomplete. This answer covers only currently cached eligible locations and can change as the source backfill progresses. Partial historical searches require the explicit setting above.</p>{% endif %}
+  {% if result.partial_history %}<p class="status-message waiting">{{ result.source_name }} historical collection is incomplete. This answer covers only currently cached eligible locations and can change as the source backfill progresses. Partial historical searches require the explicit setting above.</p>{% endif %}
   <h2 id="answer-title" class="answer-title">{{ result.title }}</h2>
   <div class="winner-card">
     <div class="winner-copy">

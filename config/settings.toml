@@ -41,3 +41,9 @@ revision_days = 7
 
 [alerts]
 enabled = true
+
+[bg_direct]
+enabled = true
+export_interval_seconds = 180
+exports_per_cycle = 32
+revision_days = 7
