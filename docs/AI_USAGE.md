@@ -1,6 +1,36 @@
 # AI usage
 
+## Version 2 source/search upgrade
+
+The owner requested clearer cleanest-air wording, official Bulgarian station
+detail, a default latest-reading search and configurable historical/time
+definitions. Primary-source requests verified 32 national site identities,
+addresses and coordinates. The national live map returned unlabelled,
+untimestamped zero placeholders rather than usable concentrations.
+
+The owner approved using factual Bulgarian station metadata with Bulgaria's
+actual EEA-delivered observations, clearly identifying the common provenance,
+and approved cleanest-day/hour searches where real hourly history exists.
+No runtime AI or search API was introduced.
+
+Implementation preserved the city-average option, added an automatically
+backed-up schema migration, timestamp/freshness-cohort checks, explicit ranking
+definitions and compatibility tests. SQL query-plan inspection corrected a slow
+join in wide hourly searches; the top-time result set is bounded and its full
+scope disclosed. Existing user-authored/generated PDFs were not overwritten.
+
 This project was developed with an AI assistant using **Copilot SDK in VS Code**.
+
+### Version 2 publication scope
+
+The owner explicitly selected
+[ivanjdrakovFourth/Clean-Air-Project](https://github.com/ivanjdrakovFourth/Clean-Air-Project)
+for the final update and requested a small ordinary Git pull for colleagues
+who already have the complete runtime. This update therefore publishes code,
+configuration, tests and Markdown evidence without changing the committed
+runtime or SQLite LFS objects. Each installation backs up/migrates its own
+database and refreshes real data through its existing collector.
+The refreshed complete ZIP is a separate portable deliverable.
 
 ## What AI was used for
 

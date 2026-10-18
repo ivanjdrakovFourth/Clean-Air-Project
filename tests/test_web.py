@@ -82,13 +82,15 @@ def test_source_outage_does_not_break_cached_queries(client, settings, seed, mon
 
 def test_server_rendered_ui_and_docs_work_without_external_assets(client, seed):
     seed("Alpha", "A1", "2025-01-01", 10)
-    response = client.get("/")
+    response = client.get("/?start=2025-01-01&end=2025-01-01")
     assert response.status_code == 200
     assert "Alpha" in response.text
     assert "UTC" in response.text
-    assert "LOWEST MEASURED AVERAGE" in response.text
+    assert "Cleanest measured city" in response.text
+    assert "LESS POLLUTION = CLEANER AIR" in response.text
     assert "https://cdn" not in response.text
     assert "script-src 'self'" in response.headers["content-security-policy"]
+    assert 'data-last-success="' in response.text
     docs = client.get("/docs")
     assert docs.status_code == 200
     assert "works offline" in docs.text

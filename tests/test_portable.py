@@ -86,3 +86,17 @@ def test_start_launcher_explains_unresolved_lfs_runtime(settings):
     assert result.returncode == 1
     assert "git lfs pull" in result.stdout
     assert "not been fully downloaded" in result.stdout
+
+
+def test_small_portable_handover_omits_only_git_internals(settings):
+    for parts in (("python", "python.exe"), ("prometheus", "prometheus.exe"), ("manifest.json",)):
+        path = (settings.root / "runtime").joinpath(*parts)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("fixture", encoding="utf-8")
+    (settings.root / ".git").mkdir()
+    (settings.root / ".git" / "config").write_text("private local metadata", encoding="utf-8")
+    output = make_handover(settings, include_git=False)
+    with zipfile.ZipFile(output) as bundle:
+        assert not any(name.startswith("CleanAirFinder/.git/") for name in bundle.namelist())
+        assert "CleanAirFinder/runtime/python/python.exe" in bundle.namelist()
+        assert "CleanAirFinder/var/data/clean_air.sqlite3" in bundle.namelist()

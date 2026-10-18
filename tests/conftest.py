@@ -20,6 +20,7 @@ def settings(tmp_path):
     )
     configured = Settings(tmp_path, options, original.reference)
     configured.prepare_directories()
+    shutil.copytree(original.root / "config", tmp_path / "config")
     shutil.copytree(original.root / "clean_air" / "templates", tmp_path / "clean_air" / "templates")
     shutil.copytree(original.root / "clean_air" / "static", tmp_path / "clean_air" / "static")
     initialize(configured.database)

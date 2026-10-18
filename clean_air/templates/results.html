@@ -1,49 +1,65 @@
 {% if error %}
 <section class="error-card" role="alert">
-  <p class="eyebrow">WE COULDN'T COMPLETE THIS COMPARISON</p>
-  <h2>Let's make the request a little clearer.</h2>
+  <p class="eyebrow">NO TRUSTWORTHY RESULT FOR THIS REQUEST</p>
+  <h2>Let's make the comparison clearer.</h2>
   <p>{{ error.message }}</p>
   {% if error.details and error.details.excluded_cities %}
-  <details><summary>Why cities were excluded</summary><ul>{% for city in error.details.excluded_cities %}<li><strong>{{ city.city }}:</strong> {{ city.reason }} Best station coverage: {{ "%.1f" | format(city.best_station_coverage_percent) }}%.</li>{% endfor %}</ul></details>
+  <details><summary>Why locations were excluded</summary><ul>{% for location in error.details.excluded_cities %}<li><strong>{{ location.name or location.city }}:</strong> {{ location.reason }}{% if location.best_station_coverage_percent is defined %} Best station coverage: {{ "%.1f" | format(location.best_station_coverage_percent) }}%.{% endif %}</li>{% endfor %}</ul></details>
   {% endif %}
   {% if error.details and error.details.available_start %}<p>Stored history: {{ error.details.available_start }} to {{ error.details.available_end }}, UTC.</p>{% endif %}
 </section>
 {% elif result %}
 {% set winner = result.winners[0] %}
-<section class="results-section" aria-labelledby="winner-title">
-  <div class="results-intro"><p class="eyebrow">YOUR COMPARISON</p><span>{{ result.start }} &mdash; {{ result.end }} &middot; {{ result.pollutant }} &middot; UTC</span></div>
+{% set hourly = result.period.mode == 'current' or result.target == 'hour' %}
+{% set location_period = result.period.mode == 'historical' and result.target == 'locations' %}
+<section class="results-section" aria-labelledby="answer-title">
+  <div class="results-intro"><p class="eyebrow">YOUR ANSWER &middot; {{ result.pollutant }}</p><span>{{ result.period.label }}</span></div>
+  <h2 id="answer-title" class="answer-title">{{ result.title }}</h2>
   <div class="winner-card">
     <div class="winner-copy">
-      <span class="winner-tag">LOWEST MEASURED AVERAGE{% if result.winners | length > 1 %} &middot; TIED{% endif %}</span>
-      <h2 id="winner-title">{% for city in result.winners %}{{ city.city }}{% if not loop.last %} &amp; {% endif %}{% endfor %}</h2>
-      <p>Among {{ result.rankings | length }} eligible cities for this pollutant and period.</p>
-      <p class="winner-caveat">Least polluted among measured cities does not necessarily mean healthy air.</p>
+      <span class="winner-tag">{% if result.objective == 'average' %}LESS POLLUTION = CLEANER AIR{% elif result.objective == 'reference_days' %}DAILY REFERENCE COMPARISON{% else %}RELATIVE IMPROVEMENT, NOT ABSOLUTE CLEANLINESS{% endif %}{% if result.winners | length > 1 %} &middot; TIED{% endif %}</span>
+      <h3 id="winner-title">{% for row in result.winners[:4] %}{{ row.name }}{% if not loop.last %} &amp; {% endif %}{% endfor %}{% if result.winners | length > 4 %} + {{ result.winners | length - 4 }} tied results{% endif %}</h3>
+      {% if winner.location.address %}<p class="station-address">{{ winner.location.address }}</p>{% endif %}
+      {% if winner.time_start %}<p class="winner-time">{{ winner.time_start | utc }} &mdash; {{ winner.time_end | utc }}</p>{% endif %}
+      <p>Compared {{ result.eligible_location_count }} eligible {% if result.view == 'stations' %}monitoring station{% else %}city{% endif %}{% if result.eligible_location_count != 1 %}{% if result.view == 'stations' %}s{% else %} averages{% endif %}{% endif %} for this pollutant and time.</p>
+      <p class="winner-caveat">{% if result.objective == 'improvement' %}A larger reduction can still leave a location more polluted than another.{% else %}Cleanest among eligible measurements does not guarantee healthy air.{% endif %}</p>
     </div>
-    <div class="winner-value"><strong>{{ "%.2f" | format(winner.mean) }}</strong><span>&micro;g/m&sup3; average {{ result.pollutant }}</span><small>Lower is better</small></div>
+    <div class="winner-value"><strong>{{ "%.2f" | format(winner.mean) }}</strong><span>&micro;g/m&sup3; {{ result.pollutant }} {% if hourly %}hourly{% else %}average{% endif %}</span><small>This measures pollution, not quality points. Lower is cleaner.</small></div>
   </div>
   <div class="stat-grid">
-    <article class="stat-card"><span>Days at or below reference</span><strong>{{ "%.1f" | format(winner.days_within_reference_percent) }}<small>%</small></strong><p>{{ winner.days_at_or_below_reference }} of {{ winner.valid_days }} valid days</p></article>
-    <article class="stat-card"><span>Days above reference</span><strong>{{ winner.days_above_reference }}</strong><p>Daily city mean &gt; {{ result.reference.daily_threshold }} &micro;g/m&sup3;</p></article>
-    <article class="stat-card"><span>Period coverage</span><strong>{{ "%.1f" | format(winner.coverage_percent) }}<small>%</small></strong><p>{{ winner.valid_days }} of {{ winner.requested_days }} requested days</p></article>
-    <article class="stat-card"><span>Contributing stations</span><strong>{{ winner.station_count }}</strong><p>Qualifying physical monitoring stations</p></article>
+    {% if result.objective == 'improvement' %}
+    <article class="stat-card"><span>Change versus earlier history</span><strong>{{ "%.1f" | format(winner.improvement_percent) }}<small>%</small></strong><p>Positive means reduced pollution; negative means an increase.</p></article>
+    <article class="stat-card"><span>Earlier stored baseline mean</span><strong>{{ "%.2f" | format(winner.baseline_mean) }}</strong><p>&micro;g/m&sup3; across {{ winner.baseline_days }} earlier valid days</p></article>
+    {% elif location_period %}
+    <article class="stat-card"><span>Days at or below daily reference</span><strong>{{ "%.1f" | format(winner.days_within_reference_percent) }}<small>%</small></strong><p>{{ winner.days_at_or_below_reference }} of {{ winner.valid_days }} valid days</p></article>
+    <article class="stat-card"><span>Days above daily reference</span><strong>{{ winner.days_above_reference }}</strong><p>Daily mean &gt; {{ result.reference.daily_threshold }} &micro;g/m&sup3;</p></article>
+    {% else %}
+    <article class="stat-card"><span>Time being compared</span><strong>{% if hourly %}1<small> hour</small>{% else %}1<small> day</small>{% endif %}</strong><p>{{ winner.time_start | utc }}</p></article>
+    <article class="stat-card"><span>Eligible monitored locations</span><strong>{{ result.eligible_location_count }}</strong><p>{% if result.period.mode == 'current' %}Same reported hour for every location{% else %}Period cohort meets the coverage policy{% endif %}</p></article>
+    {% endif %}
+    <article class="stat-card"><span>{% if location_period %}Period coverage{% else %}Measurement type{% endif %}</span><strong>{% if location_period %}{{ "%.1f" | format(winner.coverage_percent) }}<small>%</small>{% elif hourly %}Hourly{% else %}Daily{% endif %}</strong><p>{% if location_period %}{{ winner.valid_days }} of {{ winner.requested_days }} requested days{% elif hourly %}Daily WHO limits are not applied to hours{% else %}A valid UTC-day mean, not an instantaneous reading{% endif %}</p></article>
+    <article class="stat-card"><span>Contributing physical stations</span><strong>{{ winner.station_count }}</strong><p>{{ winner.stations | join(', ') }}</p></article>
   </div>
-  {% if result.winners | length > 1 %}<p class="note">The supporting cards describe {{ winner.city }}. Each tied city's details appear below. Ties use a numerical tolerance of 0.000000001 &micro;g/m&sup3;, not rounded display values.</p>{% endif %}
+  {% if result.winners | length > 1 %}<p class="note">The cards describe the first tied result. The table contains each listed result's own measurements. Ties use unrounded values.</p>{% endif %}
   <div class="ranking-card">
-    <div class="section-heading"><div><p class="eyebrow">THE BIGGER PICTURE</p><h3>How the eligible cities compare</h3></div><span class="subtle-tag">{{ result.pollutant }} &middot; lower is better</span></div>
+    <div class="section-heading"><div><p class="eyebrow">COMPARE THE EVIDENCE</p><h3>{% if result.target == 'locations' %}How the locations compare{% else %}Cleanest measured times{% endif %}</h3></div><span class="subtle-tag">{{ result.pollutant }} &middot; {{ result.view }}</span></div>
+    {% if result.results_limited %}<p class="note">Showing the best 50 of {{ result.total_ranked_results }} measured location/time combinations. Narrow the dates or choose a location for more specific results.</p>{% endif %}
     <div class="table-scroll">
-      <table><caption class="sr-only">Eligible city rankings by average concentration</caption><thead><tr><th scope="col">Rank / city</th><th scope="col">Average (&micro;g/m&sup3;)</th><th scope="col">Coverage</th><th scope="col">Stations</th><th scope="col">Days within reference</th><th scope="col">Provisional station-days</th></tr></thead><tbody>
-      {% for city in result.rankings %}
-      <tr{% if city.rank == 1 %} class="winning-row"{% endif %}><th scope="row"><span class="rank-number">{{ city.rank }}</span>{{ city.city }}</th><td><strong>{{ "%.3f" | format(city.mean) }}</strong></td><td>{{ "%.1f" | format(city.coverage_percent) }}%</td><td title="{{ city.stations | join(', ') }}">{{ city.station_count }}</td><td>{{ city.days_at_or_below_reference }} / {{ city.valid_days }}</td><td>{{ city.provisional_station_days }}</td></tr>
+      <table><caption class="sr-only">{{ result.title }} comparison</caption><thead><tr><th scope="col">Rank / location</th>{% if result.target != 'locations' %}<th scope="col">UTC time</th>{% endif %}<th scope="col">Pollution (&micro;g/m&sup3;)</th>{% if location_period %}<th scope="col">Coverage</th><th scope="col">{% if result.objective == 'improvement' %}Improvement{% else %}Days within reference{% endif %}</th>{% endif %}<th scope="col">Stations</th></tr></thead><tbody>
+      {% for row in result.rankings %}
+      <tr{% if row.rank == 1 %} class="winning-row"{% endif %}><th scope="row"><span class="rank-number">{{ row.rank }}</span>{{ row.name }}{% if row.location.address %}<small class="location-address">{{ row.location.address }}</small>{% endif %}</th>{% if result.target != 'locations' %}<td>{{ row.time_start | utc }}</td>{% endif %}<td><strong>{{ "%.3f" | format(row.mean) }}</strong></td>{% if location_period %}<td>{{ "%.1f" | format(row.coverage_percent) }}%</td><td>{% if result.objective == 'improvement' %}{{ "%.1f" | format(row.improvement_percent) }}%{% else %}{{ row.days_at_or_below_reference }} / {{ row.valid_days }}{% endif %}</td>{% endif %}<td title="{{ row.stations | join(', ') }}">{{ row.station_count }}</td></tr>
       {% endfor %}
       </tbody></table>
     </div>
   </div>
-  <div class="result-meta"><p><strong>{{ result.reference.name }}</strong>: {{ result.reference.daily_threshold }} &micro;g/m&sup3;, daily city mean. Last successful collection: {{ result.last_successful_collection | utc }}.</p><p>Policy {{ result.policy_id }} &middot; Method {{ result.methodology.version }} &middot; Station coverage requirement {{ "%g" | format(result.methodology.minimum_period_coverage * 100) }}% of requested days.</p></div>
-  <details class="details-card"><summary>{{ result.excluded_cities | length }} cities excluded &mdash; see coverage and reasons</summary><ul>{% for city in result.excluded_cities %}<li><strong>{{ city.city }}:</strong> {{ city.reason }} Best station coverage: {{ "%.1f" | format(city.best_station_coverage_percent) }}%.</li>{% else %}<li>All city-mapped candidates met the coverage requirements.</li>{% endfor %}</ul></details>
-  <details class="details-card"><summary>Sources, station details and limitations</summary>
-    <p>Source: <a href="{{ result.source.url }}" target="_blank" rel="noopener">{{ result.source.name }}</a>, &copy; {{ result.source.copyright }}, <a href="{{ result.source.license_url }}" target="_blank" rel="noopener">{{ result.source.license }}</a>. {{ result.source.changes }} Latest stored observation ends {{ result.latest_observation | utc }}.</p>
-    <p>{{ result.methodology.station_selection }} {{ result.methodology.station_weighting }} Source-reported valid daily values are used directly; their underlying hourly coverage can be unknown. Derived hourly days require at least {{ "%g" | format(result.methodology.minimum_hourly_coverage * 100) }}% valid hours.</p>
-    <ul>{% for city in result.rankings %}<li><strong>{{ city.city }}:</strong> {{ city.stations | join(', ') }}. {{ city.provider_hourly_coverage_unknown }} provider-reported station-days have unspecified hourly coverage.</li>{% endfor %}</ul>
+  <div class="result-meta"><p><strong>Definition:</strong> {{ result.methodology.ranking }}</p><p>{% if result.reference.applicable %}{{ result.reference.name }}: {{ result.reference.daily_threshold }} &micro;g/m&sup3; (daily mean).{% else %}Hourly results are not classified using daily WHO references.{% endif %} Last successful collection: {{ result.last_successful_collection | utc }}.</p><p>Policy {{ result.policy_id }} &middot; Method {{ result.methodology.version }}{% if result.period.mode == 'historical' %} &middot; Period cohort requires {{ result.methodology.minimum_valid_days }} valid day(s).{% endif %}</p></div>
+  <details class="details-card"><summary>{{ result.excluded_locations | length }} locations excluded &mdash; see coverage and reasons</summary><ul>{% for row in result.excluded_locations %}<li><strong>{{ row.name }}:</strong> {{ row.reason }}{% if row.best_station_coverage_percent is defined %} Best station coverage: {{ "%.1f" | format(row.best_station_coverage_percent) }}%.{% endif %}</li>{% else %}<li>All candidates qualified for this comparison.</li>{% endfor %}</ul></details>
+  <details class="details-card"><summary>Official sources, station details and limitations</summary>
+    <p>Measurements: <a href="{{ result.source.url }}" target="_blank" rel="noopener">{{ result.source.name }}</a>, &copy; {{ result.source.copyright }}, <a href="{{ result.source.license_url }}" target="_blank" rel="noopener">{{ result.source.license }}</a>. {{ result.source.changes }}</p>
+    <p>Station names/addresses: <a href="{{ result.source.station_metadata_url }}" target="_blank" rel="noopener">Bulgarian Executive Environment Agency (ИАОС)</a>. These are the same national observations delivered through EEA, not independent readings averaged together.</p>
+    <p>{{ result.methodology.station_selection }} {{ result.methodology.station_weighting }} Hourly-derived days require {{ "%g" | format(result.methodology.minimum_hourly_coverage * 100) }}% valid hours. Source-valid daily capture can remain unspecified.</p>
+    {% if result.methodology.baseline %}<p>{{ result.methodology.baseline.definition }} Baseline needs at least {{ result.methodology.baseline.minimum_station_days }} valid earlier days at each contributing station.</p>{% endif %}
+    <ul>{% for row in result.rankings %}<li><strong>{{ row.name }}:</strong> {{ row.stations | join(', ') }}.{% if row.location.latitude is not none %} Coordinates {{ row.location.latitude }}, {{ row.location.longitude }}. {{ row.location.station_type }} / {{ row.location.area_type }}. Metadata verified {{ row.location.metadata_verified_on }}.{% endif %} {{ row.provisional_station_days }} provisional station readings/days; {{ row.provider_hourly_coverage_unknown }} daily records have unspecified capture.</li>{% endfor %}</ul>
     <ul>{% for warning in result.warnings %}<li>{{ warning }}</li>{% endfor %}</ul>
   </details>
 </section>

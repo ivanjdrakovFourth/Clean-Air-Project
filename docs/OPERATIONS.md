@@ -37,6 +37,34 @@ The initial import must complete before comparisons are enabled. Once history
 exists, collection failures do not make cached historical queries unavailable.
 Provisional values, stale source data and failed updates are disclosed.
 
+### Current and historical searches
+
+The new default view is official Bulgarian station detail with PM10. Blank
+dates compare the latest common reported hour, within six hours by default;
+an older database does not receive a stale "current" winner. Choose dates to
+use history. Search settings offers the original city-average view, other
+definitions and cleanest-day/hour searches; see [methodology](METHODOLOGY.md).
+
+Current search freshness is deliberately stricter than the general 48-hour
+source-staleness alert. Offline mode can still answer current searches only
+while the saved observations satisfy that six-hour comparison policy.
+No AI API or web search runs during a user request.
+
+The named station catalog is a verified, bundled snapshot, not a promise of
+continuously updated street coverage. Do not relabel national-map placeholder
+zeros as live readings. Source checks are in [DATA_SOURCES.md](DATA_SOURCES.md).
+
+### Database upgrade
+
+Schema 1 is backed up automatically under `var\backups\before-schema-2-*.sqlite3`
+before migration to schema 2. A failed backup stops the migration. Existing
+measurements and city mappings are retained; a station-metadata table and
+hourly-search index are added. Old archive headers without station metadata
+remain accepted; new archives carry that metadata.
+
+Keep the backup and use matching application/schema versions when rolling back.
+Do not run an old application against a migrated database.
+
 To stop and release files before making a ZIP:
 
 ```powershell

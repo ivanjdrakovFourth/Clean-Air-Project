@@ -17,6 +17,7 @@ from .database import (
 from .metrics import Metrics
 from .settings import Settings, months_before, timestamp_now, utc_today
 from .source import EeaSource, SourceError, read_observations
+from .station_catalog import apply_catalog
 
 LOGGER = logging.getLogger(__name__)
 
@@ -79,6 +80,9 @@ class Collector:
                 raise RuntimeError("SQLite did not create a collection run")
         try:
             self._metadata(source, force)
+            apply_catalog(
+                self.settings.database, self.settings.root / "config" / "bulgarian-stations.json"
+            )
             inventories = [(dataset, source.files(dataset)) for dataset in (2, 1)]
             if not inventories[0][1] or not inventories[1][1]:
                 raise SourceError(

@@ -169,3 +169,101 @@ was checkpointed and integrity-checked before preparing the tracked snapshot.
 
 Git LFS must retrieve its objects for a runnable Git checkout. The previously
 published portable Release remains available as a complete ordinary ZIP.
+
+## Version 2: Bulgarian station detail and expanded search
+
+Verified on **2026-10-18** with **101 passing tests** and Ruff passing.
+The upstream TestClient deprecation warning remains non-blocking.
+
+### Source and real-data checks
+
+- The official Bulgarian national map returned 32 station identities, addresses
+  and coordinates, but no usable timestamped/pollutant-labelled readings.
+  Its placeholder zeros were not imported.
+- All 32 national sites were joined one-to-one to EEA station IDs at identical
+  coordinates. Names and whitespace-normalized addresses were checked against
+  the actual national response, not copied from an unofficial station list.
+- The real EEA refresh completed all 87 files. The checked database then contained
+  **218,071 observations** and 32 named national sites.
+- The checked latest common PM10 hour compared **27 stations**, with the same
+  2026-10-18 14:00-15:00 UTC interval for every included site.
+- Historical station view, original city view, cleanest day, cleanest hour,
+  reference-day shares and earlier-history improvement all returned real results.
+
+### Correctness and compatibility
+
+New tests cover optional/paired dates, stale/future readings, common-hour cohorts,
+physical-station method deduplication, station addresses, explicit location scope,
+alternate ranking definitions, exact day weighting with unequal reporting,
+matching baseline station cohorts, real zero versus placeholder zero, result
+limits and no fabricated hourly history.
+
+Schema 1 migration makes a verified backup before adding station metadata and
+the hourly index. Tests prove preserved observations, idempotent migration and
+no continuation after backup failure. New archives preserve station metadata;
+older archive headers without it remain restorable.
+An active old application holds the shared workspace lock and prevents migration
+before any schema change. Shutdown, storage release and migration reuse that lock.
+
+### Browser and monitoring
+
+Actual browser checks verified:
+
+- initial blank dates, PM10 station view, collapsed settings and a clearly labelled
+  "Cleanest measured station" answer with site address and reported UTC hour;
+- changed-filter notice, historical submissions and original city averages;
+- custom thresholds not changing a lowest-average winner;
+- distinct reference-day/improvement titles and button wording;
+- cleanest day/hour, station selection and explicit incompatible/no-hour errors;
+- no document-level horizontal overflow at 1440, 900, 390 and 260 pixels, with
+  advanced settings both open and closed.
+- automatic refresh of an untouched current-results page after collection
+  finishes, without discarding unsent date selections.
+
+Bundled Prometheus remained healthy, scraped the application and passed
+`promtool` configuration/rule validation. No runtime AI API was added.
+
+### Performance, including a failed check and its correction
+
+The first concurrent full-year PM10 HTTP test exceeded the 300 ms engineering
+target. Investigation found avoidable Python-side daily materialization; daily
+aggregation was moved into SQLite without changing its weighting/coverage rules.
+Query-plan inspection also removed a quadratic join in the advanced hourly search.
+
+The final HTTP benchmark used **100 requests per case, four concurrent clients**:
+
+| Pollutant | One day p95 | Thirty days p95 | Twelve months p95 |
+|---|---:|---:|---:|
+| PM2.5 | 80.609 ms | 72.939 ms | 72.494 ms |
+| PM10 | 74.580 ms | 73.106 ms | 88.210 ms |
+
+All six normal location-comparison cases met the 300 ms target. A wide advanced
+hour search is more work: the checked full year evaluated 152,804 station/hour
+combinations, returned the disclosed best 50 and took about **0.98 seconds**
+in-process. A one-day hourly search took about **20 ms**. Those exploratory
+hour-search timings are not presented as four-client p95 measurements.
+
+See the separately named version-2 benchmark JSON files for the measured output.
+These are hardware/load/snapshot-specific results, not universal latency promises.
+The additional latest-hour HTTP benchmark achieved **70.110 ms p95** over 100
+requests with four concurrent clients. An exploratory full-year hourly HTTP
+request took **1.805 seconds** while other benchmark activity was present;
+this is a one-off advanced-query measurement, not a p95 claim.
+
+- [Normal HTTP benchmark](benchmark-v2-http.json)
+- [Comparison-service benchmark](benchmark-v2-service.json)
+- [Current and exploratory advanced HTTP checks](benchmark-v2-expanded.json)
+
+### Portable package and small-update deployment
+
+The actual version-2 release ZIP was extracted and renamed to another folder.
+Its bundled doctor reported database integrity `ok` and 32 verified sites, and
+all **101 tests** passed through the copied Windows test launcher. The copied
+start/stop scripts also ran successfully from outside that folder on port 8001;
+Prometheus registered and scraped that changed target, and shutdown released files.
+
+The Git update intentionally leaves existing runtime and committed SQLite LFS
+objects unchanged. Existing complete installations receive source/configuration
+changes with an ordinary fast-forward pull; startup backs up and migrates their
+own local databases. Updated full database contents are in the separate portable
+ZIP, not forced over a colleague's working measurement history.

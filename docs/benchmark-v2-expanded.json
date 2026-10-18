@@ -1,0 +1,32 @@
+{
+  "kind": "current HTTP p95 under four concurrent clients plus sequential exploratory advanced requests",
+  "current_requests": 100,
+  "concurrency": 4,
+  "current_p50_ms": 34.109,
+  "current_p95_ms": 70.11,
+  "current_target_ms": 300,
+  "current_target_met": true,
+  "advanced_examples": [
+    {
+      "case": "one_day_hour",
+      "elapsed_http_ms": 59.768,
+      "eligible_locations": 26,
+      "total_candidates": 623,
+      "returned_rows": 50
+    },
+    {
+      "case": "year_hour",
+      "elapsed_http_ms": 1804.8,
+      "eligible_locations": 23,
+      "total_candidates": 152804,
+      "returned_rows": 50
+    },
+    {
+      "case": "month_improvement",
+      "elapsed_http_ms": 122.221,
+      "eligible_locations": 27,
+      "total_candidates": 27,
+      "returned_rows": 27
+    }
+  ]
+}

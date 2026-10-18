@@ -1,0 +1,81 @@
+{
+  "kind": "complete HTTP requests with response-shape verification",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.16",
+  "target_p95_ms": 300,
+  "all_targets_met": true,
+  "results": [
+    {
+      "pollutant": "PM2.5",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "p50_ms": 58.183,
+      "p95_ms": 80.609,
+      "maximum_ms": 107.452,
+      "target_met": true
+    },
+    {
+      "pollutant": "PM2.5",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "p50_ms": 54.363,
+      "p95_ms": 72.939,
+      "maximum_ms": 79.558,
+      "target_met": true
+    },
+    {
+      "pollutant": "PM2.5",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "p50_ms": 50.168,
+      "p95_ms": 72.494,
+      "maximum_ms": 81.082,
+      "target_met": true
+    },
+    {
+      "pollutant": "PM10",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "p50_ms": 51.283,
+      "p95_ms": 74.58,
+      "maximum_ms": 81.938,
+      "target_met": true
+    },
+    {
+      "pollutant": "PM10",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "p50_ms": 48.65,
+      "p95_ms": 73.106,
+      "maximum_ms": 76.504,
+      "target_met": true
+    },
+    {
+      "pollutant": "PM10",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "p50_ms": 59.32,
+      "p95_ms": 88.21,
+      "maximum_ms": 98.148,
+      "target_met": true
+    }
+  ]
+}

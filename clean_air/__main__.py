@@ -26,6 +26,7 @@ from .operations import (
 )
 from .settings import Options, load_settings, timestamp_now
 from .shutdown_control import shutdown_control
+from .station_catalog import apply_catalog
 from .web import create_app
 
 
@@ -46,7 +47,11 @@ def main() -> int:
     restore_command = commands.add_parser("restore", help="Restore a checksummed archive from var\\archives")
     restore_command.add_argument("name")
     commands.add_parser("backup", help="Make a consistent local SQLite backup")
-    commands.add_parser("handover", help="Create a verified ZIP with runtime and database snapshot")
+    handover = commands.add_parser("handover", help="Create a verified ZIP with runtime and database snapshot")
+    handover.add_argument(
+        "--without-git", action="store_true",
+        help="Omit local Git/LFS object storage from a smaller runnable handover",
+    )
     commands.add_parser("test", help="Run lint and the offline automated tests")
     performance = commands.add_parser("benchmark", help="Measure real-data query performance")
     performance.add_argument("--iterations", type=int, default=100)
@@ -64,6 +69,7 @@ def main() -> int:
             settings = replace(settings, options=Options.model_validate(values))
         configure_logging(settings)
         initialize(settings.database)
+        apply_catalog(settings.database, settings.root / "config" / "bulgarian-stations.json")
         if args.command == "serve":
             ensure_port_available(settings.options.app.port)
             with instance_lock(settings), monitoring(settings):
@@ -121,7 +127,7 @@ def main() -> int:
             print(f"Verified backup: {destination}")
         elif args.command == "handover":
             with instance_lock(settings):
-                print(make_handover(settings))
+                print(make_handover(settings, include_git=not args.without_git))
         elif args.command == "benchmark":
             if not 1 <= args.iterations <= 10000:
                 raise ValueError("--iterations must be between 1 and 10000")

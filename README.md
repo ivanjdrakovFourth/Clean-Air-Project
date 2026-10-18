@@ -1,9 +1,15 @@
 # Clean Air Finder
 
-A local, portable Windows application answering: **Which measured Bulgarian city
-had the lowest air pollution over a historical period?**
+A local, portable Windows application answering: **Where is the cleanest
+measured air in Bulgaria, now or during a chosen historical period?**
 
-**Source:** [Clean-Air-Repository on GitHub](https://github.com/lemargina/Clean-Air-Repository)
+The default view names official Bulgarian monitoring stations and their site
+addresses. Leave both dates blank for the latest common reported hour; choose
+dates for history. The original city-average view is available in **Search
+settings**.
+
+**Source:** [Clean-Air-Project on GitHub](https://github.com/ivanjdrakovFourth/Clean-Air-Project)  
+**Portable download:** [GitHub Releases](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases)
 
 The repository contains the complete project source, portable runtime, installed
 Python packages and measurement database snapshot. Large binaries and the
@@ -62,6 +68,12 @@ Then double-click **`Prepare-Handover.cmd`**, or run:
 .\Prepare-Handover.cmd
 ```
 
+For the smaller ready-to-run package without local Git/LFS object caches:
+
+```powershell
+.\Prepare-Handover.cmd --without-git
+```
+
 This creates:
 
 ```text
@@ -72,7 +84,7 @@ dist\CleanAirFinder-Windows-x64.zip.sha256
 The ZIP contains the source, configuration, bundled runtimes and licenses,
 automated tests, documentation, archives and a **verified SQLite snapshot**.
 Local handover packages include Git history when packaged from a Git checkout;
-the public release ZIP deliberately omits internal Git metadata. Temporary
+`--without-git` and public release ZIPs omit internal Git metadata. Temporary
 downloads, test output, logs and monitoring history are excluded. Recipients
 extract it and use the same startup command. They do not need Python installed.
 
@@ -82,22 +94,41 @@ only an open SQLite database file while omitting its WAL.
 
 ## What the result means
 
-- Choose **PM2.5** or **PM10** and inclusive historical dates.
+- The normal answer says **Cleanest measured station/city**. It measures pollution
+  concentration: **lower pollution means cleaner air**, not a lower quality score.
+- Leave **both dates blank** for the latest comparable reported hour. All compared
+  locations must report for that same hour, within the configured six-hour maximum
+  age. No fresh comparison means an explicit error, not a stale "current" winner.
+- Choose both inclusive dates for history; the same date means one completed day.
+- Choose **PM2.5** or **PM10** explicitly. The new configured default is PM10,
+  which has broader official Bulgarian station coverage; it is never silently
+  substituted when a different pollutant was selected.
 - Dates mean **UTC calendar days**, not Bulgarian local days. This preserves
   matching windows between EEA validated daily values and current hourly data.
-- The winner has the lowest average of eligible city daily means.
+- Normally the winner has the lowest average concentration for the selected time.
 - A qualifying physical station receives equal daily weight; valid days receive
   equal period weight. Multiple sampling methods do not duplicate a station.
 - The default station/period coverage requirements are 75% of expected hourly
   observations and 90% of requested days. Valid provider-reported daily values
   use provider validity information; unspecified hourly coverage stays unknown.
-- Missing measurements never become zero. Excluded cities and reasons are shown.
+- Missing measurements never become zero. Excluded locations and reasons are shown.
 - WHO 2021 daily references are **15 ug/m3 for PM2.5** and **45 ug/m3 for PM10**.
-  A custom threshold changes descriptive daily-reference statistics, not the
-  lowest-average ranking rule.
-- The city with the lowest measured pollution is **not necessarily healthy**.
-  These city aggregates do not certify WHO or legal compliance. The WHO daily
-  guideline uses an annual 99th-percentile convention.
+  Daily references are **not applied to hourly readings**.
+- **Search settings** keeps advanced controls out of the main flow:
+  - station details or the original city-average view;
+  - lowest concentration, most valid days within the daily reference, or greatest
+    improvement versus earlier stored history;
+  - cleanest day or hour inside selected dates, optionally restricted to one location.
+- Reference-day and improvement rankings need dates and are labelled as different
+  questions. An improvement winner need not have the lowest absolute pollution.
+  The baseline uses at least 30 earlier valid days at each contributing station.
+- Cleanest-day/hour searches use the lowest concentration and the selected
+  period's qualifying station cohort. Hour searches require actual hourly data;
+  old daily averages cannot reconstruct it. The best 50 time combinations are
+  shown with the total disclosed.
+- A station address identifies the monitor, **not every nearby street**. The
+  lowest measured concentration does not guarantee healthy air. WHO daily
+  guidance uses an annual 99th-percentile convention; this is not compliance certification.
 
 See [methodology and limitations](docs/METHODOLOGY.md) for the exact calculation.
 
@@ -109,7 +140,7 @@ Browser
   +-- FastAPI: HTML templates, local JSON API, health checks, metrics
         |
         +-- SQLite: source observations, indexed station-day aggregates,
-        |           official city mappings, collection checkpoints
+        |           official station sites, city mappings, checkpoints
         |
         +-- One background collection worker
               +-- Public EEA metadata and Parquet downloads
@@ -182,6 +213,9 @@ The initial engineering target is **p95 below 300 ms**, measured separately for
 one-day, thirty-day and full-year queries for both pollutants. Benchmarks return
 a nonzero exit status if the target is missed; results are written to
 `var\reports`. This target depends on the documented machine and load.
+Those six cases measure normal location rankings. Wide advanced hourly searches
+evaluate many more location/time combinations; their timings and result limits
+are reported separately rather than claimed to meet the same p95 bound.
 
 ## Data source and attribution
 
@@ -189,6 +223,17 @@ The [EEA Air Quality Download Service](https://eeadata.github.io/AQ.Portal/pages
 provides anonymous access to validated E1a and provisional E2a measurements.
 Both are collected locally; models, gap-filled estimates and historical Airbase
 data are not mixed into the ranking.
+
+The national ИАОС map provides factual station names, site addresses and
+coordinates. Its 32 sites were uniquely matched to EEA station IDs at identical
+coordinates and stored in the versioned station catalog. On 18 October 2026 its
+measurement fields contained zero placeholders with no pollutant or timestamp,
+so those were **not** imported. The station/city selector is a change of
+comparison view, not two independent measurement sources.
+
+See [verified source research and limitations](docs/DATA_SOURCES.md). We do not
+promise agreement with Google or an AI answer based on a different pollutant,
+station network, timestamp, model or ranking definition. No AI API is used.
 
 The [Air Quality e-Reporting dataset record](https://www.eea.europa.eu/en/datahub/datahubitem-view/3b390c9c-f321-490a-b25a-ae93b2ed80c1)
 identifies **CC BY 4.0, copyright European Commission**. Attribution and an
@@ -206,11 +251,32 @@ database are downloaded instead of small pointer files:
 
 ```powershell
 git lfs install
-git clone https://github.com/lemargina/Clean-Air-Repository.git
-Set-Location '.\Clean-Air-Repository'
+git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
+Set-Location '.\Clean-Air-Project'
 git lfs pull
 .\Start-CleanAir.cmd
 ```
+
+### Updating an existing complete installation to version 2
+
+The version 2 application update changes code, configuration and documentation,
+not the portable runtime or committed database snapshot:
+
+```powershell
+.\Stop-CleanAir.cmd
+git pull --ff-only
+.\Start-CleanAir.cmd
+```
+
+No separate `git lfs pull`, package installation or runtime download is needed
+for this update when the working runtime/database are already present. Initial
+clones still require Git LFS. Do not use a hard reset to discard your local data.
+Startup backs up and migrates an existing schema-1 database, then the normal
+collector refreshes measurements online. If you have conflicting local code or
+configuration edits, preserve/merge those rather than overwriting them.
+If the saved readings are too old for "current", wait for the first online
+refresh; the untouched current-results page reloads automatically when collection
+finishes. It does not invent a winner from stale data while waiting.
 
 The runtime, its packages and the database snapshot are included in the
 repository. Logs, monitoring history, caches, backups and SQLite WAL/SHM files

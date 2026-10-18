@@ -24,32 +24,15 @@ from . import __version__
 from .comparison import ComparisonError, Search, compare, status_snapshot
 from .database import backup
 from .settings import Settings, months_before, timestamp_now, utc_today
+from .shutdown_control import workspace_lock
 
 LOGGER = logging.getLogger(__name__)
 
 
 @contextmanager
 def instance_lock(settings: Settings):
-    import msvcrt
-
-    path = settings.var / "run" / "application.lock"
-    with path.open("a+b") as handle:
-        if handle.tell() == 0:
-            handle.write(b"\0")
-            handle.flush()
-        handle.seek(0)
-        try:
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError as error:
-            raise RuntimeError(
-                "Another Clean Air process is using this workspace. Close its console with "
-                "Ctrl+C before running sync, archive, restore or handover."
-            ) from error
-        try:
-            yield
-        finally:
-            handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+    with workspace_lock(settings.root):
+        yield
 
 
 def ensure_port_available(port: int) -> None:
@@ -150,7 +133,7 @@ def open_browser_when_ready(port: int) -> None:
     threading.Thread(target=open_page, name="open-browser", daemon=True).start()
 
 
-def make_handover(settings: Settings) -> Path:
+def make_handover(settings: Settings, include_git: bool = True) -> Path:
     runtime = settings.root / "runtime"
     for required in (Path("python") / "python.exe", Path("prometheus") / "prometheus.exe", Path("manifest.json")):
         if not (runtime / required).is_file():
@@ -161,7 +144,9 @@ def make_handover(settings: Settings) -> Path:
     backup(settings.database, database_snapshot)
     output = destination / "CleanAirFinder-Windows-x64.zip"
     temporary = output.with_suffix(".zip.part")
-    directories = ("clean_air", "config", "tools", "tests", "docs", "runtime", "The Task", ".git")
+    directories = ("clean_air", "config", "tools", "tests", "docs", "runtime", "The Task")
+    if include_git:
+        directories += (".git",)
     root_files = [
         path for path in settings.root.iterdir()
         if path.is_file() and (
@@ -223,7 +208,11 @@ def benchmark(settings: Settings, iterations: int) -> dict:
                 began = time.perf_counter()
                 try:
                     response = compare(settings, search)
-                    shape = {"eligible_cities": len(response["rankings"]), "winner": response["winners"][0]["city"]}
+                    shape = {
+                        "view": response["view"],
+                        "eligible_locations": response["eligible_location_count"],
+                        "winner": response["winners"][0]["name"],
+                    }
                 except ComparisonError as error:
                     if error.code != "NO_ELIGIBLE_CITY":
                         raise

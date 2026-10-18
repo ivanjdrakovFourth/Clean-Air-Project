@@ -7,6 +7,11 @@ const threshold = document.getElementById("threshold");
 const results = document.getElementById("results");
 const button = document.getElementById("search-button");
 const panel = document.getElementById("collection-panel");
+const view = document.getElementById("view");
+const target = document.getElementById("target");
+const objective = document.getElementById("objective");
+const locationFilter = document.getElementById("location");
+const changeNotice = document.getElementById("search-change-notice");
 
 function updateReference() {
   const custom = profile.value === "custom";
@@ -15,14 +20,50 @@ function updateReference() {
   threshold.required = custom;
 }
 
+function updateSettings() {
+  for (const group of locationFilter.querySelectorAll("optgroup")) {
+    const active = group.dataset.view === view.value;
+    group.hidden = !active;
+    group.disabled = !active;
+    if (!active && [...group.querySelectorAll("option")].some(option => option.selected)) {
+      locationFilter.value = "";
+    }
+  }
+  const descriptions = {
+    average: "Lowest pollution means cleaner air. Blank dates compare the latest common reported hour. Historical dates compare averages.",
+    reference_days: "Ranks by the highest share of valid days within your daily reference; lower mean breaks ties. Historical dates are required.",
+    improvement: "Ranks percentage reduction against earlier stored history using the same station cohort. This does not mean lowest absolute pollution. Historical dates are required.",
+  };
+  document.getElementById("definition-help").textContent = target.value === "locations"
+    ? descriptions[objective.value]
+    : "Finds the lowest measured day/hour within your dates. Choose lowest pollution as the definition. Hourly searches cannot reconstruct hours from daily-only history.";
+  button.textContent = objective.value === "improvement" ? "Compare improvement \u2192"
+    : objective.value === "reference_days" ? "Compare reference days \u2192"
+    : "Find cleanest air \u2192";
+}
+
+function searchParameters() {
+  const params = new URLSearchParams(new FormData(form));
+  for (const [name, value] of [...params.entries()]) {
+    if (value === "") params.delete(name);
+  }
+  return params;
+}
+
 profile.addEventListener("change", updateReference);
+view.addEventListener("change", updateSettings);
+target.addEventListener("change", updateSettings);
+objective.addEventListener("change", updateSettings);
 updateReference();
+updateSettings();
+
+form.addEventListener("input", () => { changeNotice.hidden = false; });
+form.addEventListener("change", () => { changeNotice.hidden = false; });
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!form.reportValidity()) return;
-  const params = new URLSearchParams(new FormData(form));
-  const originalLabel = button.textContent;
+  const params = searchParameters();
   button.disabled = true;
   button.textContent = "Comparing stored measurements...";
   results.setAttribute("aria-busy", "true");
@@ -36,6 +77,7 @@ form.addEventListener("submit", async (event) => {
       throw new Error(`The local server returned ${response.status}. Check application logs.`);
     }
     results.innerHTML = content;
+    changeNotice.hidden = searchParameters().toString() === params.toString();
     window.history.replaceState(null, "", `/?${params}`);
     results.focus({ preventScroll: true });
     results.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -52,7 +94,7 @@ form.addEventListener("submit", async (event) => {
     results.replaceChildren(card);
   } finally {
     button.disabled = false;
-    button.textContent = originalLabel;
+    updateSettings();
     results.setAttribute("aria-busy", "false");
   }
 });
@@ -66,6 +108,16 @@ async function updateStatus() {
       window.location.reload();
       return;
     }
+    const lastSuccess = String(status.last_success || 0);
+    const showingCurrent = document.getElementById("start").value === ""
+      && document.getElementById("end").value === ""
+      && target.value === "locations" && objective.value === "average";
+    if (status.ready && showingCurrent && changeNotice.hidden
+        && lastSuccess !== panel.dataset.lastSuccess && lastSuccess !== "0") {
+      window.location.reload();
+      return;
+    }
+    panel.dataset.lastSuccess = lastSuccess;
     const collection = status.collection;
     document.getElementById("collection-title").textContent = status.ready
       ? "Your local history is ready"

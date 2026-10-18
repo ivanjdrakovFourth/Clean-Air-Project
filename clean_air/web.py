@@ -4,7 +4,7 @@ import logging
 import sqlite3
 import time
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import FastAPI, Query, Request
@@ -21,7 +21,8 @@ from .collector import Collector
 from .comparison import ComparisonError, Search, compare, status_snapshot
 from .database import initialize
 from .metrics import Metrics
-from .settings import Settings, load_settings, utc_today
+from .settings import Settings, load_settings
+from .station_catalog import apply_catalog
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     settings.prepare_directories()
     initialize(settings.database)
+    apply_catalog(settings.database, settings.root / "config" / "bulgarian-stations.json")
     metrics = Metrics()
     collector = Collector(settings, metrics)
     templates = Jinja2Templates(directory=str(settings.root / "clean_air" / "templates"))
@@ -128,15 +130,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             }, error.status
 
     def browser_values(request: Request, snapshot: dict) -> dict[str, str]:
-        end = snapshot["available_end"] or (utc_today() - timedelta(days=1)).isoformat()
-        start = (datetime.fromisoformat(end).date() - timedelta(days=29)).isoformat()
-        if snapshot["available_start"]:
-            start = max(start, snapshot["available_start"])
+        options = settings.options.comparison
         values = {
-            "start": start, "end": end,
-            "pollutant": settings.options.comparison.default_pollutant, "profile": "who_2021",
+            "pollutant": options.default_pollutant, "profile": "who_2021",
+            "view": options.default_view, "objective": options.default_objective,
+            "target": options.default_target,
         }
-        for name in ("start", "end", "pollutant", "profile", "threshold"):
+        for name in (
+            "start", "end", "pollutant", "profile", "threshold", "view", "objective",
+            "target", "location",
+        ):
             if name in request.query_params and request.query_params[name] != "":
                 values[name] = request.query_params[name]
         return values

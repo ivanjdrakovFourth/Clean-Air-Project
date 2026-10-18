@@ -22,6 +22,20 @@ The public dataset record was inspected during implementation and identifies
 CC BY 4.0. Recheck source terms before adding another dataset or provider; the
 EEA's general site policy has third-party and item-specific exceptions.
 
+## Bulgarian official station location facts
+
+The bundled catalog records 32 attributed station names, site addresses,
+coordinates and classifications from the Bulgarian Executive Environment Agency:
+[official national map](https://www.eea.government.bg/kav/). Station IDs were
+cross-checked against EEA official station metadata at identical coordinates.
+The factual catalog was verified on 2026-10-18 and normalizes address whitespace.
+
+This does not incorporate the national website's code, graphics or logos, and
+does not assert that the entire website has the EEA dataset's CC BY license.
+The map's unlabelled zero placeholders were not imported as measurements.
+See [DATA_SOURCES.md](DATA_SOURCES.md) for actual responses and provenance.
+Measurement attribution remains separate from location attribution.
+
 ## Guideline facts
 
 Daily and annual reference values are attributed to the

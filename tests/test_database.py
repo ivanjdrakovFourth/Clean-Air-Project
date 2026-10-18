@@ -11,7 +11,7 @@ def test_sqlite_is_persistent_indexed_and_wal_enabled(settings):
     with connect(settings.database) as connection:
         assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
         assert connection.execute("PRAGMA auto_vacuum").fetchone()[0] == 2
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
         names = {row["name"] for row in connection.execute("PRAGMA index_list(station_days)")}
         assert "station_days_query" in names
 
@@ -139,3 +139,102 @@ def test_archive_verification_failure_never_prunes_active_data(settings, monkeyp
         assert connection.execute("SELECT COUNT(*) FROM observations").fetchone()[0] == 1
         assert connection.execute("SELECT COUNT(*) FROM station_days").fetchone()[0] == 1
     assert list((settings.var / "archives").iterdir()) == []
+
+
+def test_schema_one_migration_backs_up_and_preserves_measurements(settings):
+    with connect(settings.database) as connection, connection:
+        raw_observation(connection, value=17)
+        connection.execute("DROP TABLE station_metadata")
+        connection.execute("DROP INDEX observations_hour_search")
+        connection.execute("PRAGMA user_version=1")
+    initialize(settings.database)
+    backups = list((settings.var / "backups").glob("before-schema-2-*.sqlite3"))
+    assert len(backups) == 1
+    with connect(settings.database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("SELECT value FROM observations").fetchone()[0] == 17
+        assert connection.execute("SELECT COUNT(*) FROM station_metadata").fetchone()[0] == 0
+    with connect(backups[0]) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert connection.execute("SELECT value FROM observations").fetchone()[0] == 17
+    initialize(settings.database)
+    assert len(list((settings.var / "backups").glob("before-schema-2-*.sqlite3"))) == 1
+
+
+def test_schema_migration_does_not_continue_if_backup_fails(settings, monkeypatch):
+    import pytest
+
+    def fail_backup(source, destination):
+        raise OSError("Simulated full backup disk")
+
+    with connect(settings.database) as connection, connection:
+        connection.execute("DROP TABLE station_metadata")
+        connection.execute("PRAGMA user_version=1")
+    monkeypatch.setattr("clean_air.database.backup", fail_backup)
+    with pytest.raises(OSError, match="full backup disk"):
+        initialize(settings.database)
+    with connect(settings.database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+        assert not connection.execute(
+            "SELECT name FROM sqlite_schema WHERE name='station_metadata'"
+        ).fetchone()
+
+
+def test_archive_restores_station_identity_details(settings):
+    from datetime import date
+
+    with connect(settings.database) as connection, connection:
+        raw_observation(connection, day="2020-01-01")
+        rebuild_station_days(connection, "BG0001A")
+        connection.execute(
+            "INSERT INTO station_metadata VALUES (?,?,?,?,?,?,?,?,?,?)",
+            ("BG0001A", "test", "A station", "A street", 42.7, 23.3, "urban", "background",
+             "2026-10-18", "https://www.eea.government.bg/kav/"),
+        )
+    archived = archive_old(settings, today=date(2026, 1, 1))
+    with connect(settings.database) as connection, connection:
+        connection.execute("DELETE FROM station_metadata")
+    restore(settings, settings.var / "archives" / archived["name"])
+    with connect(settings.database) as connection:
+        row = connection.execute("SELECT name,address FROM station_metadata").fetchone()
+        assert tuple(row) == ("A station", "A street")
+
+
+def test_legacy_archive_without_station_metadata_remains_restorable(settings):
+    import gzip
+    import json
+    from datetime import date
+
+    from clean_air.archive import digest
+
+    with connect(settings.database) as connection, connection:
+        raw_observation(connection, day="2020-01-01", value=19)
+        rebuild_station_days(connection, "BG0001A")
+    archived = archive_old(settings, today=date(2026, 1, 1))
+    path = settings.var / "archives" / archived["name"]
+    with gzip.open(path, "rt", encoding="utf-8") as handle:
+        lines = handle.readlines()
+    header = json.loads(lines[0])
+    del header["station_metadata"]
+    with gzip.open(path, "wt", encoding="utf-8") as handle:
+        handle.write(json.dumps(header) + "\n")
+        handle.writelines(lines[1:])
+    path.with_suffix(path.suffix + ".sha256").write_text(digest(path) + "\n", encoding="ascii")
+    restore(settings, path)
+    with connect(settings.database) as connection:
+        assert connection.execute("SELECT value FROM observations").fetchone()[0] == 19
+
+
+def test_schema_upgrade_refuses_to_modify_a_running_old_installation(settings):
+    import pytest
+
+    from clean_air.operations import instance_lock
+
+    with connect(settings.database) as connection, connection:
+        connection.execute("DROP TABLE station_metadata")
+        connection.execute("PRAGMA user_version=1")
+    with instance_lock(settings), pytest.raises(RuntimeError, match="still in use"):
+        initialize(settings.database)
+    with connect(settings.database) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert not list((settings.var / "backups").glob("before-schema-2-*.sqlite3"))

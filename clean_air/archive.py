@@ -67,6 +67,9 @@ def archive_old(settings: Settings, today: date | None = None) -> dict[str, obje
             "counts": counts,
             "cities": [dict(row) for row in connection.execute("SELECT * FROM cities")],
             "stations": [dict(row) for row in connection.execute("SELECT * FROM stations")],
+            "station_metadata": [
+                dict(row) for row in connection.execute("SELECT * FROM station_metadata")
+            ],
             "sampling_points": [dict(row) for row in connection.execute("SELECT * FROM sampling_points")],
             "import_files": [dict(row) for row in connection.execute("SELECT * FROM import_files")],
         }
@@ -127,6 +130,17 @@ def restore(settings: Settings, path: Path) -> dict[str, int]:
         connection.executemany(
             "INSERT OR IGNORE INTO stations VALUES (?, ?)",
             [(row["id"], row["city"]) for row in header["stations"]],
+        )
+        connection.executemany(
+            "INSERT OR IGNORE INTO station_metadata VALUES (?,?,?,?,?,?,?,?,?,?)",
+            [
+                (
+                    row["station_id"], row["national_code"], row["name"], row["address"],
+                    row["latitude"], row["longitude"], row["area_type"], row["station_type"],
+                    row["verified_on"], row["source_url"],
+                )
+                for row in header.get("station_metadata", [])
+            ],
         )
         connection.executemany(
             "INSERT OR IGNORE INTO sampling_points VALUES (?, ?)",

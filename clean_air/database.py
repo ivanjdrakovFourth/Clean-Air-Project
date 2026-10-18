@@ -2,18 +2,33 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 
-SCHEMA_VERSION = 1
+from .shutdown_control import workspace_lock
+
+SCHEMA_VERSION = 2
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS cities (name TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS stations (
     id TEXT PRIMARY KEY,
     city TEXT REFERENCES cities(name)
+);
+CREATE TABLE IF NOT EXISTS station_metadata (
+    station_id TEXT PRIMARY KEY REFERENCES stations(id),
+    national_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    address TEXT NOT NULL,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    area_type TEXT NOT NULL,
+    station_type TEXT NOT NULL,
+    verified_on TEXT NOT NULL,
+    source_url TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sampling_points (
     id TEXT PRIMARY KEY,
@@ -46,6 +61,8 @@ CREATE TABLE IF NOT EXISTS observations (
 CREATE INDEX IF NOT EXISTS observations_station_time
     ON observations(point_id, started);
 CREATE INDEX IF NOT EXISTS observations_retention ON observations(started);
+CREATE INDEX IF NOT EXISTS observations_hour_search
+    ON observations(pollutant,aggregation,started,ended);
 CREATE TABLE IF NOT EXISTS station_days (
     station_id TEXT NOT NULL REFERENCES stations(id),
     pollutant INTEGER NOT NULL,
@@ -109,17 +126,21 @@ def initialize(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with connect(path) as connection:
         version = connection.execute("PRAGMA user_version").fetchone()[0]
-        if version not in (0, SCHEMA_VERSION):
+        if version not in (0, 1, SCHEMA_VERSION):
             raise RuntimeError(
                 f"Unsupported database schema {version}; expected {SCHEMA_VERSION}. "
                 "Back up the database and use the matching application version."
             )
-        if version == 0:
-            connection.execute("PRAGMA auto_vacuum=INCREMENTAL")
-        connection.execute("PRAGMA journal_mode=WAL")
-        connection.executescript(SCHEMA)
-        connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
-        connection.commit()
+        with workspace_lock(path.parents[2]) if version < SCHEMA_VERSION else nullcontext():
+            if version == 1:
+                destination = path.parent.parent / "backups" / f"before-schema-2-{time.time_ns()}.sqlite3"
+                backup(path, destination)
+            if version == 0:
+                connection.execute("PRAGMA auto_vacuum=INCREMENTAL")
+            connection.execute("PRAGMA journal_mode=WAL")
+            connection.executescript(SCHEMA)
+            connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
+            connection.commit()
 
 
 def set_metadata(connection: sqlite3.Connection, key: str, value: object) -> None:

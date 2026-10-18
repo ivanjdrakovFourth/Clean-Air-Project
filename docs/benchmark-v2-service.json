@@ -1,0 +1,108 @@
+{
+  "kind": "in-process complete comparison service, real stored data",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "processor": "Intel64 Family 6 Model 170 Stepping 4, GenuineIntel",
+  "logical_cpus": 22,
+  "python": "3.13.16",
+  "sqlite": "3.50.4",
+  "target_p95_ms": 300,
+  "all_targets_met": true,
+  "results": [
+    {
+      "pollutant": "PM2.5",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "iterations": 100,
+      "p50_ms": 3.509,
+      "p95_ms": 24.114,
+      "maximum_ms": 51.64,
+      "target_met": true,
+      "result": {
+        "view": "stations",
+        "eligible_locations": 3,
+        "winner": "\u0412\u0430\u0440\u043d\u0430 - \u0410\u0418\u0421 \u0421\u041e\u0423 \u0410\u043d\u0433\u0435\u043b \u041a\u044a\u043d\u0447\u0435\u0432"
+      }
+    },
+    {
+      "pollutant": "PM2.5",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "iterations": 100,
+      "p50_ms": 3.319,
+      "p95_ms": 4.859,
+      "maximum_ms": 7.158,
+      "target_met": true,
+      "result": {
+        "view": "stations",
+        "eligible_locations": 3,
+        "winner": "\u0412\u0430\u0440\u043d\u0430 - \u0410\u0418\u0421 \u0421\u041e\u0423 \u0410\u043d\u0433\u0435\u043b \u041a\u044a\u043d\u0447\u0435\u0432"
+      }
+    },
+    {
+      "pollutant": "PM2.5",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "iterations": 100,
+      "p50_ms": 5.615,
+      "p95_ms": 8.112,
+      "maximum_ms": 11.115,
+      "target_met": true,
+      "result": {
+        "view": "stations",
+        "eligible_locations": 4,
+        "winner": "\u0412\u0430\u0440\u043d\u0430 - \u0410\u0418\u0421 \u0421\u041e\u0423 \u0410\u043d\u0433\u0435\u043b \u041a\u044a\u043d\u0447\u0435\u0432"
+      }
+    },
+    {
+      "pollutant": "PM10",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "iterations": 100,
+      "p50_ms": 3.384,
+      "p95_ms": 4.372,
+      "maximum_ms": 6.545,
+      "target_met": true,
+      "result": {
+        "view": "stations",
+        "eligible_locations": 27,
+        "winner": "\u0412\u0440\u0430\u0446\u0430 - \u0410\u0418\u0421 \u0436\u043f \u0433\u0430\u0440\u0430"
+      }
+    },
+    {
+      "pollutant": "PM10",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "iterations": 100,
+      "p50_ms": 5.189,
+      "p95_ms": 15.134,
+      "maximum_ms": 53.503,
+      "target_met": true,
+      "result": {
+        "view": "stations",
+        "eligible_locations": 25,
+        "winner": "\u0412\u0440\u0430\u0446\u0430 - \u0410\u0418\u0421 \u0436\u043f \u0433\u0430\u0440\u0430"
+      }
+    },
+    {
+      "pollutant": "PM10",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "iterations": 100,
+      "p50_ms": 43.033,
+      "p95_ms": 55.25,
+      "maximum_ms": 68.494,
+      "target_met": true,
+      "result": {
+        "view": "stations",
+        "eligible_locations": 23,
+        "winner": "\u0412\u0440\u0430\u0446\u0430 - \u0410\u0418\u0421 \u0436\u043f \u0433\u0430\u0440\u0430"
+      }
+    }
+  ]
+}

@@ -20,6 +20,31 @@ class ShutdownTarget(Protocol):
     should_exit: bool
 
 
+@contextmanager
+def workspace_lock(root: Path):
+    import msvcrt
+
+    directory = root / "var" / "run"
+    directory.mkdir(parents=True, exist_ok=True)
+    with (directory / "application.lock").open("a+b") as handle:
+        if handle.tell() == 0:
+            handle.write(b"\0")
+            handle.flush()
+        handle.seek(0)
+        try:
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        except OSError as error:
+            raise RuntimeError(
+                "The workspace is still in use by another Clean Air process. "
+                "Run Stop-CleanAir.cmd before upgrading, syncing, restoring or packaging."
+            ) from error
+        try:
+            yield
+        finally:
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+
+
 def process_start_ticks() -> int:
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.GetCurrentProcess.restype = wintypes.HANDLE
@@ -80,36 +105,19 @@ def shutdown_control(root: Path, server: ShutdownTarget):
 
 
 def release_storage(root: Path) -> None:
-    import msvcrt
-
     directory = root / "var" / "run"
-    directory.mkdir(parents=True, exist_ok=True)
-    with (directory / "application.lock").open("a+b") as handle:
-        if handle.tell() == 0:
-            handle.write(b"\0")
-            handle.flush()
-        handle.seek(0)
-        try:
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError as error:
-            raise RuntimeError(
-                "The workspace is still in use. Close its running application before creating a ZIP."
-            ) from error
-        try:
-            database = root / "var" / "data" / "clean_air.sqlite3"
-            if database.exists():
-                with closing(sqlite3.connect(database, timeout=10)) as connection:
-                    checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
-                    if checkpoint[0]:
-                        raise RuntimeError(f"SQLite still has an active reader or writer: {checkpoint}")
-                    integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
-                    if integrity != "ok":
-                        raise RuntimeError(f"Database integrity check failed: {integrity}")
-                print("Database writes flushed; integrity: ok.", flush=True)
-            else:
-                print("No local database to checkpoint.", flush=True)
-            (directory / "server.json").unlink(missing_ok=True)
-            (directory / "server.json.tmp").unlink(missing_ok=True)
-        finally:
-            handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+    with workspace_lock(root):
+        database = root / "var" / "data" / "clean_air.sqlite3"
+        if database.exists():
+            with closing(sqlite3.connect(database, timeout=10)) as connection:
+                checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                if checkpoint[0]:
+                    raise RuntimeError(f"SQLite still has an active reader or writer: {checkpoint}")
+                integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+                if integrity != "ok":
+                    raise RuntimeError(f"Database integrity check failed: {integrity}")
+            print("Database writes flushed; integrity: ok.", flush=True)
+        else:
+            print("No local database to checkpoint.", flush=True)
+        (directory / "server.json").unlink(missing_ok=True)
+        (directory / "server.json.tmp").unlink(missing_ok=True)

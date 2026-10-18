@@ -40,6 +40,11 @@ class ComparisonOptions(StrictModel):
     minimum_hourly_coverage: float = Field(default=0.75, ge=0.5, le=1)
     minimum_period_coverage: float = Field(default=0.90, ge=0.5, le=1)
     default_pollutant: Literal["PM2.5", "PM10"] = "PM2.5"
+    default_view: Literal["cities", "stations"] = "cities"
+    default_objective: Literal["average", "reference_days", "improvement"] = "average"
+    default_target: Literal["locations", "day", "hour"] = "locations"
+    current_max_age_hours: int = Field(default=6, ge=1, le=24)
+    baseline_minimum_days: int = Field(default=30, ge=7, le=365)
 
 
 class MonitoringOptions(StrictModel):

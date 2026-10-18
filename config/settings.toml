@@ -14,7 +14,12 @@ stale_after_hours = 48
 [comparison]
 minimum_hourly_coverage = 0.75
 minimum_period_coverage = 0.90
-default_pollutant = "PM2.5"
+default_pollutant = "PM10"
+default_view = "stations"
+default_objective = "average"
+default_target = "locations"
+current_max_age_hours = 6
+baseline_minimum_days = 30
 
 [monitoring]
 enabled = true
