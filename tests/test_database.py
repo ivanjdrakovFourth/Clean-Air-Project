@@ -11,9 +11,14 @@ def test_sqlite_is_persistent_indexed_and_wal_enabled(settings):
     with connect(settings.database) as connection:
         assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
         assert connection.execute("PRAGMA auto_vacuum").fetchone()[0] == 2
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
         names = {row["name"] for row in connection.execute("PRAGMA index_list(station_days)")}
         assert "station_days_query" in names
+        assert "station_days_retention" in names
+        plan = connection.execute(
+            "EXPLAIN QUERY PLAN SELECT (SELECT MIN(day) FROM station_days),(SELECT MAX(day) FROM station_days)"
+        ).fetchall()
+        assert sum("station_days_retention" in row["detail"] for row in plan) == 2
 
 
 def test_repeated_import_is_idempotent_and_validated_values_win(settings):
@@ -105,6 +110,10 @@ def test_consistent_database_backup_passes_integrity_check(settings):
     backup(settings.database, destination)
     with connect(destination) as connection:
         assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        assert connection.execute("PRAGMA journal_mode=DELETE").fetchone()[0] == "delete"
+    moved = destination.with_name("closed-backup.sqlite3")
+    destination.replace(moved)
+    moved.unlink()
 
 
 def test_archive_uses_exact_36_month_boundary(settings):
@@ -148,17 +157,17 @@ def test_schema_one_migration_backs_up_and_preserves_measurements(settings):
         connection.execute("DROP INDEX observations_hour_search")
         connection.execute("PRAGMA user_version=1")
     initialize(settings.database)
-    backups = list((settings.var / "backups").glob("before-schema-2-*.sqlite3"))
+    backups = list((settings.var / "backups").glob("before-schema-3-*.sqlite3"))
     assert len(backups) == 1
     with connect(settings.database) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
         assert connection.execute("SELECT value FROM observations").fetchone()[0] == 17
         assert connection.execute("SELECT COUNT(*) FROM station_metadata").fetchone()[0] == 0
     with connect(backups[0]) as connection:
         assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
         assert connection.execute("SELECT value FROM observations").fetchone()[0] == 17
     initialize(settings.database)
-    assert len(list((settings.var / "backups").glob("before-schema-2-*.sqlite3"))) == 1
+    assert len(list((settings.var / "backups").glob("before-schema-3-*.sqlite3"))) == 1
 
 
 def test_schema_migration_does_not_continue_if_backup_fails(settings, monkeypatch):
@@ -237,4 +246,4 @@ def test_schema_upgrade_refuses_to_modify_a_running_old_installation(settings):
         initialize(settings.database)
     with connect(settings.database) as connection:
         assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
-    assert not list((settings.var / "backups").glob("before-schema-2-*.sqlite3"))
+    assert not list((settings.var / "backups").glob("before-schema-3-*.sqlite3"))

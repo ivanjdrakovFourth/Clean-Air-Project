@@ -20,13 +20,19 @@ class ShutdownTarget(Protocol):
     should_exit: bool
 
 
+class WorkspaceBusy(RuntimeError):
+    pass
+
+
 @contextmanager
-def workspace_lock(root: Path):
+def workspace_lock(root: Path, name: str = "application.lock"):
     import msvcrt
 
+    if Path(name).name != name or name in (".", ".."):
+        raise ValueError("A workspace lock requires a simple local filename.")
     directory = root / "var" / "run"
     directory.mkdir(parents=True, exist_ok=True)
-    with (directory / "application.lock").open("a+b") as handle:
+    with (directory / name).open("a+b") as handle:
         if handle.tell() == 0:
             handle.write(b"\0")
             handle.flush()
@@ -34,7 +40,7 @@ def workspace_lock(root: Path):
         try:
             msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError as error:
-            raise RuntimeError(
+            raise WorkspaceBusy(
                 "The workspace is still in use by another Clean Air process. "
                 "Run Stop-CleanAir.cmd before upgrading, syncing, restoring or packaging."
             ) from error
@@ -107,16 +113,17 @@ def shutdown_control(root: Path, server: ShutdownTarget):
 def release_storage(root: Path) -> None:
     directory = root / "var" / "run"
     with workspace_lock(root):
-        database = root / "var" / "data" / "clean_air.sqlite3"
-        if database.exists():
-            with closing(sqlite3.connect(database, timeout=10)) as connection:
-                checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
-                if checkpoint[0]:
-                    raise RuntimeError(f"SQLite still has an active reader or writer: {checkpoint}")
-                integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
-                if integrity != "ok":
-                    raise RuntimeError(f"Database integrity check failed: {integrity}")
-            print("Database writes flushed; integrity: ok.", flush=True)
+        databases = list((root / "var" / "data").glob("*.sqlite3"))
+        if databases:
+            for database in databases:
+                with closing(sqlite3.connect(database, timeout=10)) as connection:
+                    checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+                    if checkpoint[0]:
+                        raise RuntimeError(f"SQLite still has an active reader or writer in {database.name}.")
+                    integrity = connection.execute("PRAGMA integrity_check").fetchone()[0]
+                    if integrity != "ok":
+                        raise RuntimeError(f"Database integrity check failed in {database.name}: {integrity}")
+                print(f"Database writes flushed; {database.name} integrity: ok.", flush=True)
         else:
             print("No local database to checkpoint.", flush=True)
         (directory / "server.json").unlink(missing_ok=True)

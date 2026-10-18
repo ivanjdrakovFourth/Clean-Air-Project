@@ -6,6 +6,7 @@ import logging
 import math
 import re
 import time
+import unicodedata
 from datetime import UTC, date, datetime
 from datetime import time as day_time
 from pathlib import Path
@@ -27,6 +28,17 @@ REQUIRED_COLUMNS = {
 
 class SourceError(RuntimeError):
     pass
+
+
+def mass_unit_factor(unit: str) -> float:
+    if not isinstance(unit, str):
+        raise SourceError("A concentration unit is required.")
+    normal = unicodedata.normalize("NFKC", unit).lower().replace(" ", "").replace("\u03bc", "u")
+    if normal in ("ug.m-3", "ug/m3"):
+        return 1
+    if normal in ("mg.m-3", "mg/m3"):
+        return 1000
+    raise SourceError("Unsupported concentration unit. Gas volume ratios require additional physical assumptions.")
 
 
 def point_identity(value: str) -> tuple[str, str]:
@@ -174,8 +186,7 @@ def read_observations(
                 if aggregation not in ("hour", "day"):
                     rejected += 1
                     continue
-                if row["Unit"] not in ("ug.m-3", "ug/m3", "\u00b5g/m3"):
-                    raise SourceError(f"Unsupported particulate-matter unit: {row['Unit']!r}")
+                factor = mass_unit_factor(row["Unit"])
                 start_time = datetime.fromtimestamp(started, UTC)
                 duration = ended - started
                 if (
@@ -187,7 +198,7 @@ def read_observations(
                     continue
                 point_id, station_id = point_identity(row["Samplingpoint"])
                 points.add((point_id, station_id))
-                value = float(row["Value"]) if row["Value"] is not None else None
+                value = float(row["Value"]) * factor if row["Value"] is not None else None
                 if value is not None and not math.isfinite(value):
                     value = None
                 capture = float(row["DataCapture"]) if row["DataCapture"] is not None else None

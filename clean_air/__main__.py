@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import logging
 import sqlite3
@@ -14,8 +15,10 @@ import uvicorn
 from .archive import archive_old, restore
 from .collector import Collector
 from .comparison import status_snapshot
-from .database import backup, connect, initialize
+from .credentials import save_openaq_key
+from .database import backup, connect
 from .logging_setup import configure_logging
+from .openaq import OpenAQCollector
 from .operations import (
     benchmark,
     ensure_port_available,
@@ -24,9 +27,10 @@ from .operations import (
     monitoring,
     open_browser_when_ready,
 )
+from .provider_store import PROVIDERS, for_provider, prepare_sources
+from .seeds import build_seeds
 from .settings import Options, load_settings, timestamp_now
 from .shutdown_control import shutdown_control
-from .station_catalog import apply_catalog
 from .web import create_app
 
 
@@ -41,12 +45,19 @@ def main() -> int:
     serve.add_argument("--port", type=int)
     sync = commands.add_parser("sync", help="Import or refresh real EEA data")
     sync.add_argument("--force", action="store_true")
-    commands.add_parser("status", help="Show local history and collection state")
-    commands.add_parser("doctor", help="Verify portable components and local database")
-    commands.add_parser("archive", help="Verify and archive records older than 36 months")
+    sync.add_argument("--source", choices=PROVIDERS, default="eea")
+    for command, help_text in (
+        ("status", "Show source-specific history and collection state"),
+        ("doctor", "Verify portable components and source database"),
+        ("archive", "Verify and archive source records older than 36 months"),
+        ("backup", "Make a consistent source-specific SQLite backup"),
+    ):
+        commands.add_parser(command, help=help_text).add_argument("--source", choices=PROVIDERS, default="eea")
     restore_command = commands.add_parser("restore", help="Restore a checksummed archive from var\\archives")
     restore_command.add_argument("name")
-    commands.add_parser("backup", help="Make a consistent local SQLite backup")
+    restore_command.add_argument("--source", choices=PROVIDERS, default="eea")
+    commands.add_parser("configure-openaq", help="Save an encrypted local key; it is not echoed or committed")
+    commands.add_parser("seed", help="Build sanitized source snapshots; refuses unfinished historical collection")
     handover = commands.add_parser("handover", help="Create a verified ZIP with runtime and database snapshot")
     handover.add_argument(
         "--without-git", action="store_true",
@@ -55,6 +66,7 @@ def main() -> int:
     commands.add_parser("test", help="Run lint and the offline automated tests")
     performance = commands.add_parser("benchmark", help="Measure real-data query performance")
     performance.add_argument("--iterations", type=int, default=100)
+    performance.add_argument("--source", choices=PROVIDERS, default="eea")
     args = parser.parse_args()
     try:
         settings = load_settings()
@@ -68,8 +80,13 @@ def main() -> int:
                 values["app"]["port"] = args.port
             settings = replace(settings, options=Options.model_validate(values))
         configure_logging(settings)
-        initialize(settings.database)
-        apply_catalog(settings.database, settings.root / "config" / "bulgarian-stations.json")
+        if args.command == "configure-openaq":
+            save_openaq_key(settings.root, getpass.getpass("OpenAQ API key (hidden): "))
+            print("Local key encrypted for this Windows user. It is excluded from Git and handover ZIPs.")
+            return 0
+        prepare_sources(settings)
+        if hasattr(args, "source"):
+            settings = for_provider(settings, args.source)
         if args.command == "serve":
             ensure_port_available(settings.options.app.port)
             with instance_lock(settings), monitoring(settings):
@@ -97,9 +114,12 @@ def main() -> int:
                 connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         elif args.command == "sync":
             with instance_lock(settings):
-                print(json.dumps(Collector(settings).sync_once(force=args.force), indent=2))
+                if settings.provider == "bg_direct":
+                    raise ValueError("No usable direct Bulgarian measurement connector has been verified.")
+                collector = OpenAQCollector(settings) if settings.provider == "openaq" else Collector(settings)
+                print(json.dumps(collector.sync_once(force=args.force), indent=2))
         elif args.command == "status":
-            print(json.dumps(status_snapshot(settings), indent=2))
+            print(json.dumps(status_snapshot(settings, settings.provider), indent=2))
         elif args.command == "doctor":
             for part in (Path("python") / "python.exe", Path("prometheus") / "prometheus.exe", Path("manifest.json")):
                 if not (settings.root / "runtime" / part).is_file():
@@ -112,7 +132,7 @@ def main() -> int:
                 {
                     "python": sys.version, "sqlite": sqlite3.sqlite_version,
                     "workspace": str(settings.root), "database_integrity": integrity,
-                    "history": status_snapshot(settings),
+                    "history": status_snapshot(settings, settings.provider),
                 }, indent=2,
             ))
         elif args.command == "archive":
@@ -120,11 +140,13 @@ def main() -> int:
                 print(json.dumps(archive_old(settings) or {"message": "No records need archiving."}, indent=2))
         elif args.command == "restore":
             with instance_lock(settings):
-                print(json.dumps(restore(settings, settings.var / "archives" / args.name), indent=2))
+                print(json.dumps(restore(settings, settings.archive_directory / args.name), indent=2))
         elif args.command == "backup":
-            destination = settings.var / "backups" / f"clean-air-{timestamp_now()}.sqlite3"
+            destination = settings.var / "backups" / f"{settings.provider}-{timestamp_now()}.sqlite3"
             backup(settings.database, destination)
             print(f"Verified backup: {destination}")
+        elif args.command == "seed":
+            print(json.dumps(build_seeds(settings), indent=2))
         elif args.command == "handover":
             with instance_lock(settings):
                 print(make_handover(settings, include_git=not args.without_git))

@@ -1,0 +1,512 @@
+{
+  "kind": "Independent raw-observation oracle, using SQL window functions and separate Python aggregation",
+  "imports_application_calculation_helpers": false,
+  "checks": 54,
+  "unavailable_direct_source_rejected_without_fallback": true,
+  "cases": [
+    {
+      "source": "eea",
+      "pollutant": "PM2.5",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 3,
+      "outcome": "verified_comparison",
+      "eligible_cities": 3,
+      "winners": [
+        "Varna"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM2.5",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 114,
+      "outcome": "verified_comparison",
+      "eligible_cities": 3,
+      "winners": [
+        "Varna"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM2.5",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 1780,
+      "outcome": "verified_comparison",
+      "eligible_cities": 3,
+      "winners": [
+        "Varna"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM2.5",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 3,
+      "winners": [
+        "Sofia"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM10",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 27,
+      "outcome": "verified_comparison",
+      "eligible_cities": 14,
+      "winners": [
+        "Vratsa"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM10",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 795,
+      "outcome": "verified_comparison",
+      "eligible_cities": 14,
+      "winners": [
+        "Vratsa"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM10",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 10341,
+      "outcome": "verified_comparison",
+      "eligible_cities": 13,
+      "winners": [
+        "Vratsa"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "PM10",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 14,
+      "winners": [
+        "Stara Zagora"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "NO2",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 25,
+      "outcome": "verified_comparison",
+      "eligible_cities": 11,
+      "winners": [
+        "Burgas"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "NO2",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 742,
+      "outcome": "verified_comparison",
+      "eligible_cities": 11,
+      "winners": [
+        "Burgas"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "NO2",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 8890,
+      "outcome": "verified_comparison",
+      "eligible_cities": 10,
+      "winners": [
+        "Vratsa"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "NO2",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 11,
+      "winners": [
+        "Pleven"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "O3",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 19,
+      "outcome": "verified_comparison",
+      "eligible_cities": 8,
+      "winners": [
+        "Blagoevgrad"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "O3",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 574,
+      "outcome": "verified_comparison",
+      "eligible_cities": 8,
+      "winners": [
+        "Blagoevgrad"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "O3",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 7168,
+      "outcome": "verified_comparison",
+      "eligible_cities": 8,
+      "winners": [
+        "Stara Zagora"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "O3",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 8,
+      "winners": [
+        "Blagoevgrad"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "SO2",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 28,
+      "outcome": "verified_comparison",
+      "eligible_cities": 13,
+      "winners": [
+        "Shumen"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "SO2",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 828,
+      "outcome": "verified_comparison",
+      "eligible_cities": 11,
+      "winners": [
+        "Shumen"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "SO2",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 10055,
+      "outcome": "verified_comparison",
+      "eligible_cities": 12,
+      "winners": [
+        "Shumen"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "SO2",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 13,
+      "winners": [
+        "Sliven"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "CO",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 18,
+      "outcome": "verified_comparison",
+      "eligible_cities": 9,
+      "winners": [
+        "Burgas"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "CO",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 533,
+      "outcome": "verified_comparison",
+      "eligible_cities": 9,
+      "winners": [
+        "Burgas"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "CO",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 6270,
+      "outcome": "verified_comparison",
+      "eligible_cities": 9,
+      "winners": [
+        "Vratsa"
+      ]
+    },
+    {
+      "source": "eea",
+      "pollutant": "CO",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 9,
+      "winners": [
+        "Ruse"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM2.5",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 64,
+      "outcome": "verified_comparison",
+      "eligible_cities": 3,
+      "winners": [
+        "Varna"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM2.5",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 1963,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM2.5",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 18936,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM2.5",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 3,
+      "winners": [
+        "Varna"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM10",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 75,
+      "outcome": "verified_comparison",
+      "eligible_cities": 19,
+      "winners": [
+        "Vratsa"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM10",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 2247,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM10",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 23491,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "PM10",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 19,
+      "winners": [
+        "Stara Zagora"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "NO2",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 33,
+      "outcome": "verified_comparison",
+      "eligible_cities": 14,
+      "winners": [
+        "\u0421\u043c\u043e\u043b\u044f\u043d"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "NO2",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 965,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "NO2",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 12267,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "NO2",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 14,
+      "winners": [
+        "\u0421\u043c\u043e\u043b\u044f\u043d"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "O3",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 19,
+      "outcome": "verified_comparison",
+      "eligible_cities": 12,
+      "winners": [
+        "Blagoevgrad"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "O3",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 579,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "O3",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 7699,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "O3",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 12,
+      "winners": [
+        "Blagoevgrad"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "SO2",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 37,
+      "outcome": "verified_comparison",
+      "eligible_cities": 17,
+      "winners": [
+        "\u0421\u043c\u043e\u043b\u044f\u043d"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "SO2",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 1046,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "SO2",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 13026,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "SO2",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 17,
+      "winners": [
+        "\u0421\u043c\u043e\u043b\u044f\u043d"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "CO",
+      "period": "one_day",
+      "raw_derived_rollups_verified": 26,
+      "outcome": "verified_comparison",
+      "eligible_cities": 11,
+      "winners": [
+        "Burgas"
+      ]
+    },
+    {
+      "source": "openaq",
+      "pollutant": "CO",
+      "period": "thirty_days",
+      "raw_derived_rollups_verified": 759,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "CO",
+      "period": "twelve_months",
+      "raw_derived_rollups_verified": 9175,
+      "outcome": "honest_unavailable"
+    },
+    {
+      "source": "openaq",
+      "pollutant": "CO",
+      "period": "current",
+      "outcome": "verified_comparison",
+      "eligible_cities": 11,
+      "winners": [
+        "Ruse"
+      ]
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM2.5",
+      "period": "current",
+      "shared_hour_verified": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM10",
+      "period": "current",
+      "shared_hour_verified": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "NO2",
+      "period": "current",
+      "shared_hour_verified": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "O3",
+      "period": "current",
+      "shared_hour_verified": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "SO2",
+      "period": "current",
+      "shared_hour_verified": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "CO",
+      "period": "current",
+      "shared_hour_verified": true
+    }
+  ]
+}

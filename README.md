@@ -1,333 +1,337 @@
-# Clean Air Finder
+# Clean Air Finder - Version 3
 
-A local, portable Windows application answering: **Where is the cleanest
-measured air in Bulgaria, now or during a chosen historical period?**
+**Which measured Bulgarian city had the cleanest air for the selected time?**
 
-The default view names official Bulgarian monitoring stations and their site
-addresses. Leave both dates blank for the latest common reported hour; choose
-dates for history. The original city-average view is available in **Search
-settings**.
+A portable Windows application with source-specific local history, six
+pollutants, source comparisons, an in-app Data Explorer, friendly monitoring,
+configurable alerts and light/dark themes.
 
-**Source:** [Clean-Air-Project on GitHub](https://github.com/ivanjdrakovFourth/Clean-Air-Project)  
-**Earlier portable downloads:** [GitHub Releases](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases)
+**Repository:** [ivanjdrakovFourth/Clean-Air-Project](https://github.com/ivanjdrakovFourth/Clean-Air-Project)
 
-**Version 2 delivery:** existing complete installations receive this update with
-the ordinary Git pull below. The refreshed v2 portable ZIP is prepared locally
-for sharing; it has not replaced the earlier GitHub Release. No large binaries
-or database snapshot are uploaded as part of this source-only update.
+**Complete portable download:** [Version 3.0.0 release](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases/tag/v3.0.0).
+Use the prepared Windows ZIP, not GitHub's generic source ZIP, for an
+extract-and-run package without a Git LFS installation.
 
-The repository contains the complete project source, portable runtime, installed
-Python packages and measurement database snapshot. Large binaries and the
-database use **Git LFS**. The original development milestones are retained
-locally on a backup branch rather than included in the public branch's history.
+## 1. Start and stop
 
-The interface, API, SQLite database, Python runtime, Python packages, monitoring,
-logs and archives all live in this folder. There is no Docker, Node.js, database
-server, cloud account or application login.
+Extract the complete portable folder on **Windows 10/11 x64**, then double-click
+[Start-CleanAir.cmd](Start-CleanAir.cmd), or:
 
-## Start the complete application
+```powershell
+.\Start-CleanAir.cmd
+```
 
-1. Obtain the [complete Git checkout](#using-the-complete-git-checkout) in a
-   **writable local folder** on 64-bit Windows 10 or 11. If using a handover ZIP,
-   extract it first. Do not run the application inside a ZIP, on a network drive
-   or in a folder synchronized while the database is open.
-2. Double-click **`Start-CleanAir.cmd`**, or run:
+Open **http://127.0.0.1:8000**. Keep the console running. Stop with
+[Stop-CleanAir.cmd](Stop-CleanAir.cmd) or Ctrl+C before moving/packaging files.
 
-   ```powershell
-   .\Start-CleanAir.cmd
-   ```
+At startup, an **OK-only information window** explains the automatic source
+checks. OK acknowledges the notice; collection has already started and does not
+wait for your click. Each enabled source checks for changes and fills missed
+dates, including after days or months without running the app. New records keep
+being saved while it runs.
 
-3. Your browser opens at **http://127.0.0.1:8000**.
-4. Keep the console open while using the app. To stop, double-click
-   **[Stop-CleanAir.cmd](Stop-CleanAir.cmd)**, or press **Ctrl+C** in the console.
+Each source reports its own completion in an in-app notification and persistent
+Alerts history. Missing credentials, unavailable feeds, failed checks and stale
+provider readings are not falsely reported as up to date. In Monitoring, you
+can also enable optional Windows notifications for automatic source updates.
 
-The complete checkout and handover include an already imported real-data
-database. With a fresh, empty database, the UI displays the initial backfill
-progress and does not invent a winner before the complete import has succeeded.
+The package brings its own **Python, SQLite engine, Python packages and
+Prometheus**. No Docker, Node.js, Python installation, database server or cloud
+account is required to run it. Node/Playwright used for development validation
+are not application dependencies or included runtime requirements.
 
-Internet is needed for initial collection and updates, **not for searches or
-the interface**. To deliberately run without contacting the source:
+Use a writable local folder, not a network/synchronized drive, and do not run
+inside a ZIP. Windows/organization executable policies still apply.
+
+Offline use:
 
 ```powershell
 .\Start-CleanAir.cmd --offline
 ```
 
-Use `--no-browser` when starting from an automated check or when you prefer to
-open the local address yourself.
+Stored-source searches still work. Provider collection is disabled; the UI does
+not override offline mode when a refresh button is clicked.
 
-Prometheus is included and starts automatically at
-**http://127.0.0.1:9090**. No Grafana account is needed. Corporate device policies
-may require IT approval for portable executables; the application does not
-change security settings or require administrator privileges.
+## 2. The normal interface
 
-## Make a handover ZIP
+| Menu | What you can do |
+|---|---|
+| **Compare** | Choose a source or several sources, pollutant and optional historical dates. See the cleanest measured city and its contributing monitor names, supplied addresses and coordinates. |
+| **Monitoring** | Inspect each collector, freshness, coverage by city/pollutant, quota/backfill progress, Prometheus graphs/health alerts and maintenance outcomes. Configure an encrypted local OpenAQ key and request collection. |
+| **Alerts** | Create/edit/pause/delete source-specific city and health rules; inspect persistent events; optionally request Windows desktop notifications. |
+| **Data** | Browse actual source tables with filters, pagination and CSV export. Queue source-specific backup, retention and verified archive restore operations. No SQL required. |
+| **API** | Read local endpoint documentation and generated OpenAPI JSON. |
+| **Sun/moon** | Switch light/dark themes. The preference is saved in the browser; system preference is the initial default. |
 
-First double-click **[Stop-CleanAir.cmd](Stop-CleanAir.cmd)** and wait for it to
-finish. It requests a clean shutdown, stops leftover project processes, flushes
-SQLite and checks the important file locks. It does not stop unrelated Python
-programs. Running it again when the project is already stopped is safe.
+**Blank dates** mean the latest common recent reported hour, not instantaneous
+sensor streaming. Set both dates for historical UTC days; equal dates mean one
+completed day. Changing a filter requires pressing Search; the page marks an
+unsent selection.
 
-Then double-click **`Prepare-Handover.cmd`**, or run:
+## 3. Sources really are separate
+
+| Selection | Own database | What it contains |
+|---|---|---|
+| **EEA** | `var\data\clean_air.sqlite3` | Bulgarian official observations reported through the EEA, including validated/provisional history. |
+| **OpenAQ** | `var\data\openaq.sqlite3` | Separately downloaded OpenAQ observations with upstream provider, license and monitor class. Includes permitted reference/community sensors according to configuration. |
+| **Bulgarian direct** | `var\data\bg_direct.sqlite3` | Reserved for genuine direct-source measurements/restored history. The checked government endpoints supplied site metadata but no usable concentration feed, so no fake history is seeded. |
+| **Compare selected sources** | Queries each selected store | Separate answer/error panels, top-result comparison and matched-station diagnostics; never a silent blend or fallback. |
+
+Station/city is a **geographical view**, not a source. Selecting OpenAQ never
+reads EEA history. Selecting an unavailable source returns an explicit status
+instead of borrowing another database.
+
+Some OpenAQ locations are republished **EEA observations**. Agreement there is
+not independent confirmation. Numeric station comparisons use the same reported
+hour or exactly shared qualifying historical days. Community locations without
+a verified shared identity are not guessed into a match.
+
+Source checks and limits: [DATA_SOURCES.md](docs/DATA_SOURCES.md).
+
+### Prefilled history and future OpenAQ updates
+
+The version 3 delivery contains independently collected EEA and OpenAQ history
+for the **last 12 months**, subject to each monitor's real lifetime, source gaps,
+quality and reuse permissions. This satisfies the assignment's minimum history;
+36 months is the automatic cold-archive boundary, not a requirement to download
+36 months initially. Missing source readings are never manufactured.
+
+The portable Release ZIP contains sanitized working database snapshots. The Git
+checkout carries versioned, checksummed snapshots under `seed-data`, stored
+through Git LFS. Startup imports those into the matching working store once,
+preserving equal/newer local revisions and personal alert settings. An updated
+seed is merged, not copied over a colleague's live database.
+
+**An OpenAQ key is not needed to search the bundled OpenAQ history.** It is
+needed for future OpenAQ updates on that computer. EEA updates remain anonymous.
+The direct Bulgarian portal is explicitly unavailable as a concentration feed;
+its reserved database is not falsely advertised as populated.
+
+Configure a key through **Monitoring -> OpenAQ credential setup**, or run:
 
 ```powershell
-.\Prepare-Handover.cmd
+.\Configure-OpenAQ.cmd
 ```
 
-For the smaller ready-to-run package without local Git/LFS object caches:
+Alternatively, provide `OPENAQ_API_KEY` in the process environment. Environment
+configuration takes precedence. Do not put a key into tracked TOML, a Git commit,
+an alert or a screenshot.
+
+The local credential is encrypted with **Windows user-bound DPAPI** under
+`var\secrets`; it is excluded from Git, source databases and normal handover ZIPs.
+Another computer/user must configure its own key. No key is echoed back by the UI.
+
+The first import backfills available supported records in the configured **12-36
+month window**, subject to sensor lifetimes, quality, permissions and provider
+availability. It uses UTC hourly values, not OpenAQ's local-day aggregates.
+Source names never stand in for concentration records.
+
+Later starts retain the original requested history floor and resume missing
+time, rather than silently skipping a gap that has become older than a moving
+12-month boundary. Stored history grows; records older than 36 months move to
+verified source-specific cold archives instead of being discarded.
+
+OpenAQ's free published allowance is **60 requests/minute, 2,000/hour**. The app
+paces below those limits, persists checkpoints and cooldown state, reduces
+timed-out windows and retries without deleting another source's history.
+Full initial collection can take hours; **Monitoring shows the actual progress**.
+
+Normal historical OpenAQ comparisons wait for completion. The explicit
+**Allow partial cached history** setting can inspect already loaded eligible
+records, with a prominent warning and normal coverage checks. It does not claim
+the source has finished collecting. Data Explorer can always show actual cached
+rows, including a partially collected window.
+
+## 4. Pollutants and what "cleanest" means
+
+Supported mass-concentration pollutants are **PM2.5, PM10, NO2, O3, SO2 and CO**,
+where the chosen source actually supplies them.
+
+All concentrations are normalized to **ug/m3**. A reported mg/m3 is multiplied
+by 1,000. Gas ppm/ppb values are **not** converted using guessed pressure,
+temperature or molecular assumptions. Missing/unsupported source coverage is
+disclosed.
+
+The normal definition is **lowest pollution concentration = cleaner measured
+air**, not a quality score where higher is better.
+
+Search settings also offers:
+
+- the highest share of valid days within a daily reference;
+- greatest reduction versus stored earlier history using the same station cohort;
+- cleanest day/hour inside historical dates, optionally restricted to a location;
+- reference/government-only versus all source-provided monitors.
+
+Those are different questions and their titles/criteria say so. Relative
+improvement is not necessarily the cleanest absolute air.
+
+Default eligibility is 75% valid hours for an hourly-derived day and 90%
+qualifying days per station/period. Provider-valid daily capture can be unknown.
+Missing records never become zero. Provider city groupings and station placement
+can differ; the actual contributing addresses are displayed.
+
+WHO daily references: PM2.5 15, PM10 45, NO2 25, SO2 40 and CO 4,000 ug/m3.
+**O3 has no WHO 24-hour guideline here**; the eight-hour value is not falsely
+applied to daily means. Choose a custom daily reference for an ozone
+reference-day ranking. Daily references are not applied to hourly results.
+This is not WHO/legal compliance certification or an absence-of-risk guarantee.
+
+Details: [METHODOLOGY.md](docs/METHODOLOGY.md).
+
+## 5. Monitoring and alerts are different
+
+### System/data monitoring
+
+Prometheus is bundled and normally starts with the app. **Monitoring** presents
+its real graphs/active alerts plus local source/cache health, so opening the
+advanced Prometheus interface is optional.
+
+Health distinguishes:
+
+- failed/partial collection;
+- missing credentials or unsupported feeds;
+- normal initial backfill and quota cooldown;
+- stale/future timestamps;
+- source-excluded readings and missing coverage;
+- city/pollutant combinations a source never monitored.
+
+An HTTP 200 alone is not a guarantee of good measurement data. A never-monitored
+city is not automatically a broken collector. Empty graphs are not zero latency.
+Local source checks remain visible if Prometheus is unavailable, with an explicit
+warning that time-series monitoring could not be retrieved.
+
+### Personal air-quality and source alerts
+
+In **Alerts**, choose sources, pollutant, city/condition, latest-hour or rolling
+complete-day window, definition and trigger.
+
+Rules include cleanest-city changes, cleaner/dirtier city concentrations,
+at/below/above crossings, changed completed searches, missing city data, stale
+sources, unavailable sources and collection failure.
+
+Each source has its own persisted baseline. The first assessment normally
+sets a baseline rather than inventing a change. Partial ongoing imports do not
+trigger ranking-change alerts. Repeated unchanged results do not create duplicates.
+
+Events remain in `var\data\alerts.sqlite3`. Optional desktop delivery uses
+Windows' built-in notification facilities and is requested only if enabled by
+the user. Windows focus/session/policy may suppress a popup: **requested does not
+mean seen**. The in-app history records requested/failed/uncertain delivery.
+The app must remain running; it cannot notify after its own process has stopped.
+External on-call paging/Alertmanager delivery is not configured.
+
+Personal rules/history and credentials are excluded from ordinary shared
+portable packages. Colleagues configure their own notifications.
+Automatic source-check outcomes are also kept separately from measurement
+stores. Their optional Windows delivery preference is local, not shared.
+
+## 6. Data, backups and archives through the UI
+
+**Data Explorer** reads only allowlisted tables in the selected source store.
+Dates, city, pollutant and station are bound filters; there is no arbitrary SQL
+execution endpoint. Raw excluded observations are distinguishable from eligible
+daily means. CSV exports include all filtered rows, not only the displayed page,
+and neutralize spreadsheet-formula strings.
+
+**Backup** uses SQLite's consistent backup API and verifies integrity. The
+verified file can be downloaded from the job outcome.
+
+**Archive** verifies compressed records older than 36 calendar months before
+removing active copies. Each source's archives remain separate:
+
+```text
+var\archives\                EEA, including legacy archives
+var\archives\openaq\         OpenAQ
+var\archives\bg_direct\      genuine Bulgarian-direct archives, if supplied
+```
+
+**Restore** checks source identity, SHA-256, record counts and relationships.
+A mismatched source is rejected. Verified restored windows remain queryable in
+that source; no other source is copied over them. Restoration pauses automatic
+retention for 24 hours.
+
+Operations are queued, source-locked and show waiting/running/completed/failed
+states. A busy source does not block another source's backup. The Monitoring
+menu also runs offline automated checks and measured local query benchmarks.
+Synthetic operational tests are not production measurements.
+
+Schema 1/2 databases are backed up before schema 3 expands the pollutant
+constraint and preserves measurements. Stop before upgrading; an active old
+instance prevents migration.
+
+## 7. Handover and Git updates
+
+Create a runnable package without Git/LFS caches:
 
 ```powershell
+.\Stop-CleanAir.cmd
 .\Prepare-Handover.cmd --without-git
 ```
 
-This creates:
+It refuses unfinished EEA/OpenAQ backfills, sanitizes each source snapshot,
+includes source archives and current
+runtime/code/docs, and excludes local keys, personal alert state, logs and
+temporary files. **Do not manually share the whole working folder with
+credentials/personal state included.**
 
-```text
-dist\CleanAirFinder-Windows-x64.zip
-dist\CleanAirFinder-Windows-x64.zip.sha256
+Existing complete checkout:
+
+```powershell
+.\Stop-CleanAir.cmd
+git pull --ff-only https://github.com/ivanjdrakovFourth/Clean-Air-Project.git main
+git lfs pull
+.\Start-CleanAir.cmd
 ```
 
-The ZIP contains the source, configuration, bundled runtimes and licenses,
-automated tests, documentation, archives and a **verified SQLite snapshot**.
-Local handover packages include Git history when packaged from a Git checkout;
-`--without-git` and public release ZIPs omit internal Git metadata. Temporary
-downloads, test output, logs and monitoring history are excluded. Recipients
-extract it and use the same startup command. They do not need Python installed.
+Version 3 adds new LFS data snapshots. `git lfs pull` ensures both runtime and
+seeds are real files rather than pointers (normal LFS-enabled checkouts usually
+download them automatically). Local databases migrate and keep collecting
+independently. Initial clones also need Git LFS:
 
-You can also zip the workspace yourself **after stopping the application**.
-Exclude `dist` to avoid placing an existing ZIP inside another ZIP. Do not copy
-only an open SQLite database file while omitting its WAL.
-
-## What the result means
-
-- The normal answer says **Cleanest measured station/city**. It measures pollution
-  concentration: **lower pollution means cleaner air**, not a lower quality score.
-- Leave **both dates blank** for the latest comparable reported hour. All compared
-  locations must report for that same hour, within the configured six-hour maximum
-  age. No fresh comparison means an explicit error, not a stale "current" winner.
-- Choose both inclusive dates for history; the same date means one completed day.
-- Choose **PM2.5** or **PM10** explicitly. The new configured default is PM10,
-  which has broader official Bulgarian station coverage; it is never silently
-  substituted when a different pollutant was selected.
-- Dates mean **UTC calendar days**, not Bulgarian local days. This preserves
-  matching windows between EEA validated daily values and current hourly data.
-- Normally the winner has the lowest average concentration for the selected time.
-- A qualifying physical station receives equal daily weight; valid days receive
-  equal period weight. Multiple sampling methods do not duplicate a station.
-- The default station/period coverage requirements are 75% of expected hourly
-  observations and 90% of requested days. Valid provider-reported daily values
-  use provider validity information; unspecified hourly coverage stays unknown.
-- Missing measurements never become zero. Excluded locations and reasons are shown.
-- WHO 2021 daily references are **15 ug/m3 for PM2.5** and **45 ug/m3 for PM10**.
-  Daily references are **not applied to hourly readings**.
-- **Search settings** keeps advanced controls out of the main flow:
-  - station details or the original city-average view;
-  - lowest concentration, most valid days within the daily reference, or greatest
-    improvement versus earlier stored history;
-  - cleanest day or hour inside selected dates, optionally restricted to one location.
-- Reference-day and improvement rankings need dates and are labelled as different
-  questions. An improvement winner need not have the lowest absolute pollution.
-  The baseline uses at least 30 earlier valid days at each contributing station.
-- Cleanest-day/hour searches use the lowest concentration and the selected
-  period's qualifying station cohort. Hour searches require actual hourly data;
-  old daily averages cannot reconstruct it. The best 50 time combinations are
-  shown with the total disclosed.
-- A station address identifies the monitor, **not every nearby street**. The
-  lowest measured concentration does not guarantee healthy air. WHO daily
-  guidance uses an annual 99th-percentile convention; this is not compliance certification.
-
-See [methodology and limitations](docs/METHODOLOGY.md) for the exact calculation.
-
-## Architecture
-
-```text
-Browser
-  |
-  +-- FastAPI: HTML templates, local JSON API, health checks, metrics
-        |
-        +-- SQLite: source observations, indexed station-day aggregates,
-        |           official station sites, city mappings, checkpoints
-        |
-        +-- One background collection worker
-              +-- Public EEA metadata and Parquet downloads
-              +-- Initial backfill, conditional updates and verified archiving
-
-Bundled Prometheus --> local /metrics --> local monitoring storage and alerts
+```powershell
+git lfs install
+git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
+Set-Location .\Clean-Air-Project
+git lfs pull
+.\Start-CleanAir.cmd
 ```
 
-One application process and one collection worker are intentional. SQLite WAL
-allows readers alongside a short-lived writer. This is a single-machine,
-localhost deployment, not a distributed service. Searches never call the EEA.
-Indexing and daily rollups keep query work independent of raw hourly volume.
+Do not hard-reset a colleague's collected data or resolve unrelated Git histories
+by deleting their work. A fresh clone into another folder is the safe alternative.
 
-### Workspace layout
+## 8. Architecture, configuration and verification
 
-| Folder | Purpose |
-|---|---|
-| `clean_air` | Python application, templates and static assets |
-| `config` | Validated settings, reference profiles, Prometheus configuration and alerts |
-| `runtime` | Portable Python 3.13, installed packages, Prometheus and component manifest |
-| `tests` | Offline calculation, import, archive, API and failure-behaviour tests |
-| `tools` | Reproducible runtime builder and complete HTTP benchmark |
-| `docs` | Methodology, operations, attribution, AI usage and verification results |
-| `var\data` | Persistent SQLite database |
-| `var\archives` | Verified compressed records older than 36 months |
-| `var\backups` | Consistent SQLite snapshots |
-| `var\logs` | Bounded application logs and monitoring logs |
-| `var\monitoring` | Prometheus time-series storage |
-| `var\reports` | Measured benchmark results |
-| `dist` | Generated handover ZIP and SHA-256 checksum |
+```text
+Browser UI / JSON API
+  +-- selected-source query -> EEA SQLite / OpenAQ SQLite / direct-source SQLite
+  +-- comparison -> separate answers and matched-window diagnostics
+  +-- Data Explorer -> read-only filtered records and CSV
+  +-- Monitoring -> source health + actual Prometheus API
+  +-- Alerts -> local rule/event store + optional Windows delivery
+  +-- maintenance queue -> verified source-specific operations
 
-No project state is stored in your user profile. The bundled runtime does not
-replace or modify your existing Python installation.
+Independent collection workers -> original providers -> own SQLite checkpoints
+Bundled Prometheus -> /metrics -> platform alert rules
+```
 
-## Configuration
+Settings are in `config\settings.toml` and reference facts in
+`config\profiles.toml`. Credentials are never stored there.
 
-Edit `config\settings.toml` or `config\profiles.toml`, then restart. Invalid
-configuration stops startup with an explicit error.
-
-Useful settings include ports, collection interval, 12-36 months of initial
-backfill, coverage requirements and the default pollutant. Active retention is
-36 months. Calendar days are deliberately restricted to UTC. Set
-`collection.enabled = false` for persistent offline use.
-
-Built-in profile edits must retain honest names, source attribution and version
-information. For personal preferences, select the UI's **custom** profile.
-
-## Test and measure
-
-Run offline lint and automated tests:
+Run offline lint/tests:
 
 ```powershell
 .\Test-CleanAir.cmd
 ```
 
-Measure the complete comparison service on the stored real dataset:
+CLI equivalents remain available with explicit `--source eea`, `--source openaq`
+or `--source bg_direct` for status, doctor, sync, backup, archive, restore and
+benchmark operations. No real direct connector is fabricated.
 
-```powershell
-.\runtime\python\python.exe -m clean_air benchmark --iterations 100
-```
+More: [source research](docs/DATA_SOURCES.md), [methodology](docs/METHODOLOGY.md),
+[operations](docs/OPERATIONS.md), [licenses](docs/THIRD_PARTY.md),
+[AI usage](docs/AI_USAGE.md) and [verification](docs/VERIFICATION.md).
 
-With the application running, measure complete HTTP responses with concurrent
-clients and validate the successful output shape:
-
-```powershell
-.\runtime\python\python.exe .\tools\benchmark_http.py --requests 100 --concurrency 4
-```
-
-The initial engineering target is **p95 below 300 ms**, measured separately for
-one-day, thirty-day and full-year queries for both pollutants. Benchmarks return
-a nonzero exit status if the target is missed; results are written to
-`var\reports`. This target depends on the documented machine and load.
-Those six cases measure normal location rankings. Wide advanced hourly searches
-evaluate many more location/time combinations; their timings and result limits
-are reported separately rather than claimed to meet the same p95 bound.
-
-## Data source and attribution
-
-The [EEA Air Quality Download Service](https://eeadata.github.io/AQ.Portal/pages/download-data.html)
-provides anonymous access to validated E1a and provisional E2a measurements.
-Both are collected locally; models, gap-filled estimates and historical Airbase
-data are not mixed into the ranking.
-
-The national ИАОС map provides factual station names, site addresses and
-coordinates. Its 32 sites were uniquely matched to EEA station IDs at identical
-coordinates and stored in the versioned station catalog. On 18 October 2026 its
-measurement fields contained zero placeholders with no pollutant or timestamp,
-so those were **not** imported. The station/city selector is a change of
-comparison view, not two independent measurement sources.
-
-See [verified source research and limitations](docs/DATA_SOURCES.md). We do not
-promise agreement with Google or an AI answer based on a different pollutant,
-station network, timestamp, model or ranking definition. No AI API is used.
-
-The [Air Quality e-Reporting dataset record](https://www.eea.europa.eu/en/datahub/datahubitem-view/3b390c9c-f321-490a-b25a-ae93b2ed80c1)
-identifies **CC BY 4.0, copyright European Commission**. Attribution and an
-indication of local filtering/aggregation appear in the interface, API and
-[third-party notices](docs/THIRD_PARTY.md).
-
-PM2.5 is important for health but has substantially fewer eligible Bulgarian city
-stations than PM10. The application reports the actual comparison scope rather
-than claiming national completeness.
-
-## Using the complete Git checkout
-
-Install Git and Git LFS before cloning so the actual portable binaries and
-database are downloaded instead of small pointer files:
-
-```powershell
-git lfs install
-git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
-Set-Location '.\Clean-Air-Project'
-git lfs pull
-.\Start-CleanAir.cmd
-```
-
-### Updating an existing complete installation to version 2
-
-The version 2 application update changes code, configuration and documentation,
-not the portable runtime or committed database snapshot:
-
-```powershell
-.\Stop-CleanAir.cmd
-git pull --ff-only
-.\Start-CleanAir.cmd
-```
-
-No separate `git lfs pull`, package installation or runtime download is needed
-for this update when the working runtime/database are already present. Initial
-clones still require Git LFS. Do not use a hard reset to discard your local data.
-Startup backs up and migrates an existing schema-1 database, then the normal
-collector refreshes measurements online. If you have conflicting local code or
-configuration edits, preserve/merge those rather than overwriting them.
-If the saved readings are too old for "current", wait for the first online
-refresh; the untouched current-results page reloads automatically when collection
-finishes. It does not invent a winner from stale data while waiting.
-
-The runtime, its packages and the database snapshot are included in the
-repository. Logs, monitoring history, caches, backups and SQLite WAL/SHM files
-remain excluded. Git LFS has separate GitHub storage/bandwidth quotas.
-
-GitHub-generated source archives may contain LFS pointers unless LFS objects are
-included in the repository's archive settings. For transfer without Git or
-Git LFS, create the optional handover ZIP described above.
-
-Running collection updates the tracked database locally. Stop the application
-before committing or switching revisions; database changes are not automatically
-pushed to GitHub.
-
-## Rebuilding the bundled runtime
-
-To recreate the portable runtime, use an installed Python 3.12+ on Windows x64:
-
-```powershell
-python .\tools\build_portable.py
-.\Start-CleanAir.cmd
-```
-
-The builder verifies official runtime SHA-256 checksums, installs target-specific
-wheels inside the workspace, uses the hash-pinned `requirements.lock`, and tests
-imports before replacing the active runtime. Build temporary files are local.
-Stop the app before rebuilding. A failed staging build is retained for diagnosis;
-inspect `var\build\runtime-staging` before removing that specific staging folder.
-
-To intentionally resolve new package versions:
-
-```powershell
-python .\tools\build_portable.py --refresh-dependencies
-```
-
-Review the updated lock and runtime manifest, then rerun tests, both benchmarks,
-and relocation checks. Do not assume a new dependency resolution is validated.
-
-## Further documentation
-
-- [Operations, recovery and archiving](docs/OPERATIONS.md)
-- [Methodology and trade-offs](docs/METHODOLOGY.md)
-- [Third-party licenses and data attribution](docs/THIRD_PARTY.md)
-- [AI usage and corrections](docs/AI_USAGE.md)
-- [Verification results](docs/VERIFICATION.md)
-
-With more time: independently validate station metadata and weighting with an
-air-quality specialist; add traffic/background station filtering; exercise
-larger multi-year histories; add external alert delivery; and consider PostgreSQL
-only if a multi-writer or multi-instance deployment becomes necessary.
+With more time: obtain a complete licensed direct Bulgarian measurement feed;
+review geographical grouping/station types with domain experts; add external
+on-call delivery; test clean Windows VMs and larger workloads. Separate provider
+errors/coverage are preserved rather than hidden to make comparisons look complete.

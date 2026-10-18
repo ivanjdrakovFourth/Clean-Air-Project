@@ -2,13 +2,14 @@
 
 ## The question is explicit
 
-The default question is: **which official Bulgarian monitoring station has the
-lowest measured concentration of the selected pollutant for the selected time?**
+The default question is: **which measured Bulgarian city has the lowest
+concentration of the selected pollutant for the selected time and source?**
 Lower pollutant concentration means cleaner measured air, not fewer quality points.
 
 The application compares measured locations, not every Bulgarian street.
-PM2.5 and PM10 are separate choices; it never substitutes pollutants or combines
-unlike concentrations into an undocumented score.
+PM2.5, PM10, NO2, O3, SO2 and CO are separate choices where a provider actually
+supplies them; it never substitutes pollutants or combines unlike concentrations
+into an undocumented score. An optional station view retains individual monitors.
 
 ## Official measurement delivery and Bulgarian location detail
 
@@ -24,8 +25,10 @@ Measurement data and station metadata have separate provenance.
 The national map currently returned zero values with empty pollutant and
 timestamp fields. Those are unusable placeholders and are **not measurements**.
 The existing EEA feed already distributes the Bulgarian official observations.
-The UI therefore offers a station view and the original city-average view,
-not a fictional independent direct-national measurement feed.
+The UI therefore offers a genuinely separate EEA store, an OpenAQ store and an
+explicitly unavailable direct-national store. It never copies EEA measurements
+into a fictitious populated direct feed. Station/city is an aggregation choice
+within the selected source, not another provider.
 
 The versioned catalog is local and works offline. Its names/addresses are a dated
 snapshot; renamed/new stations need re-verification, not invented locations.
@@ -64,7 +67,7 @@ an invalid request, not permission to silently choose another period.
 - Inventory URLs use the public EEA Parquet API. Verified server date filters
   omitted overlapping current files, so inventory omits those filters and data
   is filtered locally by timestamp.
-- Only supported particulate units, aligned one-hour/24-hour intervals and the
+- Only supported mass-concentration units, aligned one-hour/24-hour intervals and the
   selected pollutants are accepted.
 - Invalid/missing/negative concentrations do not enter averages. Some are kept
   in raw storage for traceability; malformed schemas/unknown units fail explicitly.
@@ -74,6 +77,43 @@ an invalid request, not permission to silently choose another period.
 - Validated source records supersede provisional ones. Within a source class,
   the latest result timestamp wins, including invalidating corrections.
 - Sampling methods at one physical station never receive multiple location weights.
+
+### OpenAQ normalization and provenance
+
+OpenAQ is downloaded separately into its own database, using permitted fixed
+Bulgarian locations. Every location retains its upstream provider, owner,
+reference/community classification and returned license terms. Mobile monitors,
+unsupported units and unestablished modification/redistribution rights are
+excluded explicitly. License validity windows bound the imported records.
+
+Use `/sensors/{id}/hours`, not local-midnight `/days` aggregates. Hours must be
+aligned UTC intervals with valid flag information and sufficient reported
+coverage. Prefer the unrounded `summary.avg` when supplied. Convert mg/m3 to
+ug/m3 by 1,000; never guess a conversion from ppm/ppb.
+
+Only an EEA-provided reference monitor with one uniquely matched official
+station within 50 metres receives that canonical station identity. Nearby
+community sensors are not assumed to be the same physical monitor.
+Missing names are explicitly identified by OpenAQ location ID. Unknown addresses
+remain unknown; coordinates are shown rather than fabricated street addresses.
+Provider-reported locality is not a separately verified municipal boundary.
+
+### Multiple selected sources
+
+Each selected source produces its own answer or explicit error panel. There is
+no pooled country-wide mean or silently chosen fallback provider. A failed
+selected source remains visible even when another selected source can answer.
+
+Current agreement diagnostics align the reported hour before comparing matched
+monitors. Historical diagnostics use the intersection of qualifying valid days,
+not two different date cohorts. Display agreement tolerance is the greater of
+0.5 ug/m3 and 5% of the larger mean; it is a display comparison, not an instrument
+uncertainty bound or a health standard. EEA observations republished by OpenAQ
+are explicitly not independent confirmation.
+
+Normal OpenAQ historical searches require completed backfill. Explicit partial
+cache opt-in is labelled, and verified bundled/restored windows remain usable
+without claiming that a larger pending collection has finished.
 
 ## Daily normalization and historical eligibility
 
@@ -146,6 +186,14 @@ restricted to one explicit station/city.
 |---|---:|---:|
 | PM2.5 | 15 ug/m3 | 5 ug/m3 |
 | PM10 | 45 ug/m3 | 15 ug/m3 |
+| NO2 | 25 ug/m3 | 10 ug/m3, not used as a period limit |
+| SO2 | 40 ug/m3 | No annual reference used here |
+| CO | 4,000 ug/m3 (4 mg/m3) | No annual reference used here |
+| O3 | **No WHO 24-hour reference applied** | Eight-hour/peak-season guidance is not a daily-mean threshold |
+
+An O3 `reference_days` search must use an explicitly chosen custom daily
+reference. Normal O3 means remain available, with within-WHO-day statistics
+shown as not applicable.
 
 A custom daily reference must be finite and nonnegative. Equality counts as
 within-reference. Percentages use valid days as their denominator; requested-day
@@ -164,13 +212,17 @@ requires the same snapshot, dates and source revisions.
 
 ## Storage and operational boundaries
 
-SQLite remains a local, single-writer WAL database with indexed observations and
-daily rollups. Schema 1 is backed up before migration to schema 2, which adds
-station metadata and an hourly-search index without deleting history. Old archives
-remain restorable; new archives retain station metadata too.
+Each provider has its own local SQLite WAL database and archive directory, with
+indexed observations and daily rollups. Schema 1/2 is backed up before migration
+to schema 3, which preserves observations and expands the pollutant constraint.
+Old unmarked archives are EEA-only; new archives retain source identity and
+station/provider provenance. Wrong-source restore is rejected.
 
 Initial backfill covers at least a twelve-month span. Coverage gaps are reported,
 not invented away. The app collects while running; searches use only local data.
+Startup resumes missed dates from preserved source-specific history/checkpoints.
+The initial year is not a rolling deletion boundary: local history grows, and
+even a gap older than the new last-year window is requested after a long pause.
 Records older than 36 calendar months use verified compressed archives.
 Automatic archiving still follows successful collection, so prolonged source
 failure can delay retention; the explicit archive command remains available.
@@ -182,5 +234,6 @@ models, periods or definitions; identical results are not guaranteed.
 
 - [Bulgarian national monitoring map](https://www.eea.government.bg/kav/)
 - [EEA downloads](https://eeadata.github.io/AQ.Portal/pages/download-data.html)
+- [OpenAQ API documentation](https://docs.openaq.org/)
 - [WHO 2021 guidance](https://www.who.int/news-room/feature-stories/detail/what-are-the-who-air-quality-guidelines)
 - [Current European AQI](https://airindex.eea.europa.eu/AQI/index.html)

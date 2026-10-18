@@ -1,5 +1,11 @@
 # Clean Air Project - Prompt history
 
+> Historical record: the exact-prompt tables below cover the original first
+> twenty written prompts, not the later version 3 conversation. Version 3's
+> source isolation, OpenAQ, alerts, monitoring, themes and prefilled-delivery
+> decisions are summarized in [AI_USAGE.md](AI_USAGE.md). Credentials supplied
+> in later conversation are intentionally not reproduced.
+
 This document separates the written conversation into:
 
 1. **Build:** prompts 1-11.

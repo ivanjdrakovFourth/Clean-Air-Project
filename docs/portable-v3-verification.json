@@ -1,0 +1,38 @@
+{
+  "zip_bytes": 257902767,
+  "entries": 2734,
+  "credential_scan": "passed",
+  "personal_state_excluded": true,
+  "clean_extraction": "V3 Final Clean Unzip",
+  "released_zip_sha256": "7664e940efdf76d1a3a3545d1cc95a6aaff1ff445c14d08f2c106af691e1ecca",
+  "portable_python": "3.13.16",
+  "portable_tests_passed": 204,
+  "independent_raw_data_checks_passed": 54,
+  "openaq_history_queried_without_key": true,
+  "relocated_app_port": 8001,
+  "prometheus_scrape_target": "http://127.0.0.1:8001/metrics",
+  "environment": "actual extracted portable package, no OpenAQ credential",
+  "maintenance_jobs": [
+    {
+      "source": "eea",
+      "action": "diagnostics",
+      "status": "completed"
+    },
+    {
+      "source": "openaq",
+      "action": "backup",
+      "status": "completed"
+    },
+    {
+      "source": "eea",
+      "action": "archive",
+      "status": "completed"
+    },
+    {
+      "source": "openaq",
+      "action": "benchmark",
+      "status": "completed"
+    }
+  ],
+  "prometheus_available": true
+}

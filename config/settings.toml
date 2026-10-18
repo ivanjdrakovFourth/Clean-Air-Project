@@ -15,7 +15,7 @@ stale_after_hours = 48
 minimum_hourly_coverage = 0.75
 minimum_period_coverage = 0.90
 default_pollutant = "PM10"
-default_view = "stations"
+default_view = "cities"
 default_objective = "average"
 default_target = "locations"
 current_max_age_hours = 6
@@ -28,3 +28,16 @@ retention_days = 7
 
 [retention]
 active_months = 36
+
+[sources]
+default = "eea"
+
+[openaq]
+enabled = true
+include_community = true
+requests_per_minute = 45
+requests_per_cycle = 1900
+revision_days = 7
+
+[alerts]
+enabled = true

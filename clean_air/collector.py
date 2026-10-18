@@ -4,6 +4,8 @@ import hashlib
 import logging
 import sqlite3
 import threading
+import time
+from collections.abc import Callable
 from datetime import timedelta
 
 from .archive import archive_old
@@ -15,7 +17,9 @@ from .database import (
     set_metadata,
 )
 from .metrics import Metrics
+from .provider_store import collection_start
 from .settings import Settings, months_before, timestamp_now, utc_today
+from .shutdown_control import WorkspaceBusy, workspace_lock
 from .source import EeaSource, SourceError, read_observations
 from .station_catalog import apply_catalog
 
@@ -23,11 +27,18 @@ LOGGER = logging.getLogger(__name__)
 
 
 class Collector:
-    def __init__(self, settings: Settings, metrics: Metrics | None = None) -> None:
+    def __init__(
+        self, settings: Settings, metrics: Metrics | None = None,
+        report: Callable[[dict | None], None] | None = None,
+    ) -> None:
+        if settings.provider != "eea":
+            raise ValueError("The EEA collector requires the EEA source store; cross-source import was refused.")
         self.settings = settings
         self.metrics = metrics
+        self.report = report
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
+        self.wake_event = threading.Event()
 
     def start(self) -> None:
         self.thread = threading.Thread(target=self._loop, name="eea-collector", daemon=True)
@@ -45,11 +56,24 @@ class Collector:
 
     def _loop(self) -> None:
         while not self.stop_event.is_set():
+            delay = self.settings.options.collection.refresh_seconds
             try:
-                self.sync_once()
+                result = self.sync_once()
+                if self.report:
+                    self.report(result)
+            except WorkspaceBusy:
+                LOGGER.info("EEA collection is waiting for another source operation to finish.")
+                delay = 60
             except (SourceError, sqlite3.Error, OSError, ValueError):
                 LOGGER.exception("Collection failed; stored history remains available")
-            self.stop_event.wait(self.settings.options.collection.refresh_seconds)
+                delay = 60
+                if self.report and not self.stop_event.is_set():
+                    self.report(None)
+            deadline = time.monotonic() + delay
+            while not self.stop_event.is_set() and time.monotonic() < deadline:
+                if self.wake_event.wait(min(0.5, max(0, deadline - time.monotonic()))):
+                    break
+            self.wake_event.clear()
 
     def _progress(self, run_id: int, message: str, **values: int) -> None:
         allowed = {"total_files", "completed_files", "imported_rows", "rejected_rows"}
@@ -63,9 +87,15 @@ class Collector:
             )
 
     def sync_once(self, force: bool = False) -> dict[str, int]:
+        with workspace_lock(self.settings.root, "eea-collector.lock"):
+            return self._sync_once(force)
+
+    def _sync_once(self, force: bool = False) -> dict[str, int]:
         source = EeaSource(self.settings)
+        start = collection_start(self.settings, self.settings.options.collection.history_months)
         now = timestamp_now()
         with connect(self.settings.database) as connection, connection:
+            set_metadata(connection, "history_requested_start", start.isoformat())
             connection.execute(
                 "UPDATE collection_runs SET status='interrupted', finished=?, "
                 "message='Interrupted; resuming from committed file checkpoints.' WHERE status='running'",
@@ -93,7 +123,6 @@ class Collector:
             self._progress(run_id, f"Importing {len(files)} measurement files.", total_files=len(files))
             counts = {"completed_files": 0, "imported_rows": 0, "rejected_rows": 0}
             failures: list[str] = []
-            start = months_before(utc_today(), self.settings.options.collection.history_months)
             end = utc_today() + timedelta(days=1)
             for dataset, url in files:
                 if self.stop_event.is_set():
@@ -121,9 +150,10 @@ class Collector:
                 bounds = connection.execute(
                     "SELECT MIN(day), MAX(day) FROM station_days"
                 ).fetchone()
-                if not bounds[0] or bounds[0] > start.isoformat():
+                active_start = max(start, months_before(utc_today(), self.settings.options.retention.active_months))
+                if not bounds[0] or bounds[0] > active_start.isoformat():
                     raise SourceError(
-                        "The imported source does not cover the required twelve-month start date. "
+                        "The imported source does not cover the required active-history start date. "
                         "No complete-history claim will be made."
                     )
                 latest = connection.execute(

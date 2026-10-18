@@ -1,0 +1,393 @@
+{
+  "kind": "complete HTTP requests with response-shape verification",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.16",
+  "target_p95_ms": 300,
+  "all_targets_met": true,
+  "results": [
+    {
+      "source": "combined",
+      "pollutant": "PM2.5",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 144.662,
+      "p95_ms": 219.123,
+      "maximum_ms": 260.035,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM2.5",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 114.722,
+      "p95_ms": 174.139,
+      "maximum_ms": 191.4,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM2.5",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 151.648,
+      "p95_ms": 211.072,
+      "maximum_ms": 243.628,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM2.5",
+      "period": "current",
+      "start": null,
+      "end": null,
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 196.141,
+      "p95_ms": 269.307,
+      "maximum_ms": 297.487,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM10",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 174.727,
+      "p95_ms": 247.497,
+      "maximum_ms": 284.971,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM10",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 118.064,
+      "p95_ms": 185.768,
+      "maximum_ms": 201.1,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM10",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 159.268,
+      "p95_ms": 222.702,
+      "maximum_ms": 234.236,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "PM10",
+      "period": "current",
+      "start": null,
+      "end": null,
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 178.284,
+      "p95_ms": 254.402,
+      "maximum_ms": 321.369,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "NO2",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 142.057,
+      "p95_ms": 208.305,
+      "maximum_ms": 235.296,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "NO2",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 113.352,
+      "p95_ms": 180.282,
+      "maximum_ms": 206.776,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "NO2",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 136.148,
+      "p95_ms": 208.831,
+      "maximum_ms": 250.156,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "NO2",
+      "period": "current",
+      "start": null,
+      "end": null,
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 184.811,
+      "p95_ms": 260.143,
+      "maximum_ms": 290.459,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "O3",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 148.871,
+      "p95_ms": 246.446,
+      "maximum_ms": 276.684,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "O3",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 119.911,
+      "p95_ms": 191.813,
+      "maximum_ms": 207.636,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "O3",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 137.414,
+      "p95_ms": 207.375,
+      "maximum_ms": 221.154,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "O3",
+      "period": "current",
+      "start": null,
+      "end": null,
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 189.802,
+      "p95_ms": 256.514,
+      "maximum_ms": 283.915,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "SO2",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 152.124,
+      "p95_ms": 229.03,
+      "maximum_ms": 249.272,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "SO2",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 128.492,
+      "p95_ms": 194.046,
+      "maximum_ms": 209.16,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "SO2",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 140.751,
+      "p95_ms": 212.035,
+      "maximum_ms": 228.404,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "SO2",
+      "period": "current",
+      "start": null,
+      "end": null,
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 182.822,
+      "p95_ms": 240.962,
+      "maximum_ms": 280.58,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "CO",
+      "period": "one_day",
+      "start": "2026-10-17",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 145.666,
+      "p95_ms": 232.423,
+      "maximum_ms": 241.78,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "CO",
+      "period": "thirty_days",
+      "start": "2026-09-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 119.626,
+      "p95_ms": 184.837,
+      "maximum_ms": 222.609,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "CO",
+      "period": "twelve_months",
+      "start": "2025-10-18",
+      "end": "2026-10-17",
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 129.42,
+      "p95_ms": 182.018,
+      "maximum_ms": 190.297,
+      "target_met": true
+    },
+    {
+      "source": "combined",
+      "pollutant": "CO",
+      "period": "current",
+      "start": null,
+      "end": null,
+      "requests": 100,
+      "concurrency": 4,
+      "outcomes": {
+        "comparison": 100
+      },
+      "p50_ms": 158.195,
+      "p95_ms": 235.953,
+      "maximum_ms": 270.639,
+      "target_met": true
+    }
+  ]
+}

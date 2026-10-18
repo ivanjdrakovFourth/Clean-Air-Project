@@ -1,0 +1,20 @@
+<header class="site-header shell">
+  <a class="brand" href="/" aria-label="Clean Air Finder home"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M25 6C12 4 5 10 7 20c9 4 18-2 18-14Z"/><path d="M7 26 21 12"/></svg></span><span>clean air<span class="brand-light"> finder</span></span></a>
+  <nav aria-label="Main navigation">
+    <a href="/">Compare</a><a href="/monitoring">Monitoring</a><a href="/alerts">Alerts</a><a href="/data">Data</a><a href="/docs">API</a>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch colour theme" aria-pressed="false">
+      <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z"/></svg>
+      <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+    </button>
+  </nav>
+</header>
+<dialog id="startup-sync-dialog" class="sync-dialog" aria-labelledby="startup-sync-title" aria-describedby="startup-sync-message">
+  <p class="eyebrow">AUTOMATIC DATA MAINTENANCE</p>
+  <h2 id="startup-sync-title">Checking your data sources</h2>
+  <p id="startup-sync-message">The app checks enabled sources at startup and fills missing dates in the background. Collection does not wait for this acknowledgement and continues while the app is running.</p>
+  <ul id="startup-sync-sources"></ul>
+  <p class="note">Each source reports its own completion. Unavailable feeds, missing keys and connection failures are not reported as up to date.</p>
+  <button type="button" id="startup-sync-ok" autofocus>OK</button>
+</dialog>
+<div id="collection-notification-region" class="collection-notification-region" role="log" aria-live="polite" aria-label="Automatic source-update notifications"></div>
+<script src="/static/collection-notices.js" defer></script>

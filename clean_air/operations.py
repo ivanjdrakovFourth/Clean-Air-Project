@@ -22,7 +22,8 @@ import httpx
 
 from . import __version__
 from .comparison import ComparisonError, Search, compare, status_snapshot
-from .database import backup
+from .provider_store import PROVIDERS, for_provider
+from .seeds import sanitized_snapshot
 from .settings import Settings, months_before, timestamp_now, utc_today
 from .shutdown_control import workspace_lock
 
@@ -140,8 +141,15 @@ def make_handover(settings: Settings, include_git: bool = True) -> Path:
             raise RuntimeError(f"The portable runtime is incomplete: missing {required}")
     destination = settings.root / "dist"
     destination.mkdir(exist_ok=True)
-    database_snapshot = settings.var / "backups" / "handover.sqlite3"
-    backup(settings.database, database_snapshot)
+    snapshots = {}
+    for provider in PROVIDERS:
+        configured = for_provider(settings, provider)
+        if configured.database.exists():
+            snapshot_path = settings.var / "backups" / f"handover-{provider}.sqlite3"
+            sanitized_snapshot(
+                configured, snapshot_path, require_complete=provider != "bg_direct",
+            )
+            snapshots[configured.database.name] = snapshot_path
     output = destination / "CleanAirFinder-Windows-x64.zip"
     temporary = output.with_suffix(".zip.part")
     directories = ("clean_air", "config", "tools", "tests", "docs", "runtime", "The Task")
@@ -160,14 +168,17 @@ def make_handover(settings: Settings, include_git: bool = True) -> Path:
         if folder.exists():
             paths.extend(path for path in folder.rglob("*") if path.is_file())
     archives = settings.var / "archives"
-    paths.extend(path for path in archives.iterdir() if path.is_file() and not path.name.endswith(".part"))
+    paths.extend(path for path in archives.rglob("*") if path.is_file() and not path.name.endswith(".part"))
     with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as bundle:
         for path in sorted(paths):
             if "__pycache__" in path.parts or path.suffix in (".pyc", ".pyo"):
                 continue
+            if path.suffix.lower() == ".pdf":
+                continue
             relative = path.relative_to(settings.root)
             bundle.write(path, str(Path("CleanAirFinder") / relative))
-        bundle.write(database_snapshot, str(Path("CleanAirFinder") / "var" / "data" / "clean_air.sqlite3"))
+        for name, snapshot in snapshots.items():
+            bundle.write(snapshot, str(Path("CleanAirFinder") / "var" / "data" / name))
         bundle.writestr(
             "CleanAirFinder/handover-manifest.json",
             json.dumps(
@@ -188,7 +199,7 @@ def make_handover(settings: Settings, include_git: bool = True) -> Path:
 
 
 def benchmark(settings: Settings, iterations: int) -> dict:
-    snapshot = status_snapshot(settings)
+    snapshot = status_snapshot(settings, settings.provider)
     if not snapshot["ready"]:
         raise RuntimeError("Import the real history before benchmarking.")
     end = min(utc_today() - timedelta(days=1), date.fromisoformat(snapshot["available_end"]))
@@ -201,7 +212,7 @@ def benchmark(settings: Settings, iterations: int) -> dict:
     results = []
     for pollutant in ("PM2.5", "PM10"):
         for name, start in periods.items():
-            search = Search(start=start, end=end, pollutant=pollutant)
+            search = Search(start=start, end=end, pollutant=pollutant, source=settings.provider)
             timings = []
             shape = None
             for _ in range(iterations):

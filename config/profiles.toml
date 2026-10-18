@@ -8,3 +8,6 @@ pm25_daily = 15.0
 pm10_daily = 45.0
 pm25_annual = 5.0
 pm10_annual = 15.0
+no2_daily = 25.0
+so2_daily = 40.0
+co_daily = 4000.0

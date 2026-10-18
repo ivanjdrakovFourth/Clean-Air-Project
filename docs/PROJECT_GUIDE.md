@@ -1,14 +1,12 @@
 # Clean Air Finder - Understand it, demonstrate it, explain it
 
-> **Version 2 update (2026-10-18):** this guide records the original city-first
-> implementation. The current UI defaults to named Bulgarian official stations
-> and a latest-common-hour search when dates are blank. Search settings retains
-> city averages and adds reference-day/improvement definitions and cleanest
-> day/hour searches. Schema 2 adds a tenth table, `station_metadata`, without
-> removing the original tables. For the current rules and UI flow, read
+> **Version 3 update (2026-10-18):** start with the new quick tour below.
+> The detailed numbered chapters retain the original EEA teaching examples;
+> select EEA, cities and lowest-pollution ranking when reproducing their SQL.
+> Version 3 defaults to cities/PM10, adds independent OpenAQ history, six
+> pollutants, combined source panels and schema 3. For current rules, read
 > [README](../README.md), [METHODOLOGY.md](METHODOLOGY.md) and
-> [DATA_SOURCES.md](DATA_SOURCES.md). The original city SQL examples remain useful;
-> select `view=cities` and `objective=average` when reproducing them.
+> [DATA_SOURCES.md](DATA_SOURCES.md). No Docker has been added.
 
 > **The whole project in one sentence:** a background collector saves real air
 > measurements locally; the website compares that saved history; the Windows
@@ -16,6 +14,103 @@
 
 This is a learning guide, not a script to memorize. Read the short explanations
 first. Open the expandable reference boxes only when you need them.
+
+## Version 3 quick tour: demonstrate the requirements without developer tools
+
+### Start and choose the data you mean
+
+1. Extract the complete Windows Release ZIP and run
+   [Start-CleanAir.cmd](../Start-CleanAir.cmd).
+2. Open Compare. Choose **EEA** or **OpenAQ**, then a pollutant. Blank dates mean
+   a recent common reported hour. Dates mean completed UTC historical days.
+3. Press Search. Read the cleanest-city title, concentration, coverage,
+   exclusions and contributing monitor names/addresses/coordinates.
+4. Choose combined mode and check the providers to compare. Each gets its own
+   answer/error panel; a source is never silently replaced by another.
+5. Try the sun/moon button. The browser remembers the theme.
+
+At each new application run, acknowledge the startup information with OK.
+Automatic checks and gap catch-up have already started; OK is not a download
+permission/cancel control. Separate per-source outcomes appear as notifications
+and in Alerts. Monitoring has an optional Windows source-update notification
+setting. Missing keys, offline mode and unavailable feeds are reported honestly.
+
+The databases are separate: `clean_air.sqlite3` for EEA, `openaq.sqlite3` for
+OpenAQ and `bg_direct.sqlite3` for any genuine direct feed. Choosing a source
+also chooses its historical data. The current direct Bulgarian portal supplies
+station facts but no usable concentration series; the UI says so honestly.
+
+The assignment requires 12 months of queryable stored history. Its 36-month
+number is the cold-archive boundary, not an obligation to download three years
+initially. Bundled, independently collected history is usable without a key.
+An OpenAQ key is needed only for subsequent OpenAQ updates and can be saved
+through Monitoring. It is encrypted locally, not included in the package.
+
+If the application was closed for days or months, it catches up missing dates
+automatically. Its original history floor is preserved instead of leaving a hole
+before a moving last-year boundary. Older-than-36-month data becomes a verified
+cold archive; retaining history does not mean keeping every old row active forever.
+
+### Monitoring: prove the app and collectors are observable
+
+Open **Monitoring**. Each source card shows stored rows, freshness, completion,
+errors and API cooldown rather than treating every HTTP 200 as good data.
+Expand city/pollutant coverage to distinguish missing monitoring from a stale or
+failed collector. Change the pollutant and chart time window.
+
+The graphs and platform alerts are actual Prometheus results. Prometheus starts
+with the application; its advanced page is optional. If it is unavailable, the
+menu shows that failure instead of a fake green "all clear". Request source
+refresh without creating competing collectors.
+
+### Alerts: decide what should notify you
+
+Open **Alerts**, create a rule, choose its sources, pollutant and condition.
+Examples: the cleanest city changes; Sofia gets cleaner/dirtier; a city crosses
+your threshold; a selected completed comparison changes; data becomes stale,
+unavailable or a collector fails.
+
+Rules are source-specific. First assessment normally establishes a baseline.
+Change notifications require actual qualifying result changes, not a heartbeat
+or partly imported ranking. You can edit, pause or delete a rule and inspect
+persistent event history. Deleting a rule does not erase its prior events.
+
+Desktop notifications are optional. Test them from the menu. Windows can
+suppress a popup, so "requested" is not proof that somebody saw it. In-app
+history remains the reliable record. The browser may be closed, but the
+application console must keep running.
+
+### Data: prove storage, filtering, backup and retention
+
+Open **Data**. Select a provider and table, dates, pollutant, city or station.
+Browse raw observations, daily rollups, station metadata, import files and
+collection/archive records. Raw excluded readings are not qualifying averages.
+Use pagination or export all matching rows to CSV. No SQL is required.
+
+Choose a source and queue a backup or archive job. Follow its actual status;
+"queued" is not "finished". Backup files use consistent SQLite copies and
+integrity checks. Archive moves verified records older than 36 months; a new
+12-month package correctly reports zero old records rather than inventing a
+cold archive. Restore verifies checksum, source identity and record counts.
+An EEA archive cannot be restored into OpenAQ.
+
+Monitoring also queues diagnostics and measured benchmarks. These are real
+operations with result/error output, not decorative buttons.
+
+### Explain prefilled delivery and updates
+
+The portable ZIP includes sanitized working source databases. The Git checkout
+also contains versioned LFS seeds and a checksum manifest. On startup a new seed
+is merged once into the correct working store; newer/equal local observation
+revisions are preserved and source file IDs are remapped by URL.
+
+Personal rules, events, quota history and API keys are not shared. A future
+collector failure leaves cached historical queries available. Missing values
+never become zero. EEA observations republished through OpenAQ are disclosed as
+common upstream, not independent confirmation.
+
+Stop with [Stop-CleanAir.cmd](../Stop-CleanAir.cmd). Use the prepared handover
+command rather than zipping local secrets or personal history by hand.
 
 **Best reading experience:** in VS Code, press **Ctrl+Shift+V** to open Markdown
 Preview. The reference boxes are collapsed there, so you do not face the whole

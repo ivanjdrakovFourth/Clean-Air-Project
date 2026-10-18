@@ -50,6 +50,30 @@ class Metrics:
         self.worker_expected = Gauge(
             "clean_air_worker_expected", "Whether automatic collection is enabled", registry=self.registry
         )
+        self.source_healthy = Gauge(
+            "clean_air_source_collection_healthy", "Latest source collection is not failed/partial",
+            ["source"], registry=self.registry,
+        )
+        self.source_enabled = Gauge(
+            "clean_air_source_enabled", "Source collection is configured and enabled",
+            ["source"], registry=self.registry,
+        )
+        self.source_age_by_provider = Gauge(
+            "clean_air_source_data_age_seconds", "Age of source-specific latest measurement",
+            ["source"], registry=self.registry,
+        )
+        self.source_ready = Gauge(
+            "clean_air_source_cache_ready", "Source has its own searchable cache",
+            ["source"], registry=self.registry,
+        )
+        self.source_backfill = Gauge(
+            "clean_air_source_backfill_complete", "Configured source historical backfill finished",
+            ["source"], registry=self.registry,
+        )
+        self.source_workers = Gauge(
+            "clean_air_source_worker_alive", "This source's collection thread is alive",
+            ["source"], registry=self.registry,
+        )
 
     def refresh(self, settings: Settings) -> None:
         with connect(settings.database) as connection:
@@ -65,3 +89,15 @@ class Metrics:
             self.days.set(connection.execute("SELECT COUNT(*) FROM station_days").fetchone()[0])
         self.source_age.set(max(0, timestamp_now() - int(latest)) if latest else 0)
         self.stale_after.set(settings.options.collection.stale_after_hours * 3600)
+        from .provider_search import source_status
+
+        for provider, state in source_status(settings)["provider_statuses"].items():
+            run = state.get("collection")
+            self.source_healthy.labels(provider).set(
+                bool(run and run["status"] not in ("failed", "partial", "interrupted"))
+            )
+            self.source_enabled.labels(provider).set(state.get("collection_enabled", False))
+            self.source_ready.labels(provider).set(state["ready"])
+            self.source_backfill.labels(provider).set(state.get("backfill_complete", False))
+            latest = state.get("latest_observation")
+            self.source_age_by_provider.labels(provider).set(max(0, timestamp_now() - latest) if latest else 0)

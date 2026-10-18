@@ -59,11 +59,22 @@ def archive_old(settings: Settings, today: date | None = None) -> dict[str, obje
             connection.rollback()
             return None
         name = f"before-{cutoff.isoformat()}-{time.time_ns()}.jsonl.gz"
-        path = settings.var / "archives" / name
+        settings.archive_directory.mkdir(parents=True, exist_ok=True)
+        path = settings.archive_directory / name
         temporary = path.with_suffix(path.suffix + ".part")
         header = {
             "format": FORMAT,
             "cutoff": cutoff.isoformat(),
+            "provider": settings.provider,
+            "provider_metadata": [
+                dict(row) for row in connection.execute(
+                    "SELECT * FROM metadata WHERE key LIKE 'station_provider:%'"
+                )
+            ],
+            "historical_window": dict(connection.execute(
+                "SELECT MIN(day) AS start,MAX(day) AS end FROM station_days WHERE day<?",
+                (cutoff.isoformat(),),
+            ).fetchone()),
             "counts": counts,
             "cities": [dict(row) for row in connection.execute("SELECT * FROM cities")],
             "stations": [dict(row) for row in connection.execute("SELECT * FROM stations")],
@@ -114,16 +125,23 @@ def archive_old(settings: Settings, today: date | None = None) -> dict[str, obje
 
 def restore(settings: Settings, path: Path) -> dict[str, int]:
     path = path.resolve()
-    if not path.is_relative_to((settings.var / "archives").resolve()):
+    if not path.is_relative_to(settings.archive_directory.resolve()):
         raise ValueError("Copy the archive and its checksum into this workspace's var\\archives first.")
     checksum_path = path.with_suffix(path.suffix + ".sha256")
     expected = checksum_path.read_text("ascii").strip()
     if len(expected) != 64 or digest(path) != expected:
         raise ValueError("Archive checksum verification failed; nothing was restored.")
     header, counts = inspect_archive(path)
+    if header.get("provider", "eea") != settings.provider:
+        raise ValueError("This archive belongs to another measurement source; select its source explicitly.")
     if counts != header["counts"]:
         raise ValueError("Archive row counts do not match the manifest; nothing was restored.")
     with connect(settings.database) as connection, connection:
+        restored_days = []
+        for row in header.get("provider_metadata", []):
+            if not row["key"].startswith("station_provider:"):
+                raise ValueError("Unexpected provider metadata in archive.")
+            connection.execute("INSERT OR IGNORE INTO metadata VALUES (?,?)", (row["key"], row["value"]))
         connection.executemany(
             "INSERT OR IGNORE INTO cities VALUES (?)", [(row["name"],) for row in header["cities"]]
         )
@@ -159,6 +177,8 @@ def restore(settings: Settings, path: Path) -> dict[str, int]:
             next(handle)
             for line in handle:
                 item = json.loads(line)
+                if item["table"] == "station_days":
+                    restored_days.append(item["row"][2])
                 if item["table"] == "observations":
                     row = item["row"]
                     if len(row) != 12 or row[-1] not in file_ids:
@@ -167,6 +187,11 @@ def restore(settings: Settings, path: Path) -> dict[str, int]:
                     connection.execute(UPSERT_OBSERVATION, row)
         for row in header["stations"]:
             rebuild_station_days(connection, row["id"])
+        if restored_days and connection.execute("SELECT 1 FROM station_days LIMIT 1").fetchone():
+            windows = get_metadata(connection, "restored_source_windows", [])
+            windows.append({"start": min(restored_days), "end": max(restored_days)})
+            set_metadata(connection, "restored_source_windows", windows)
+            set_metadata(connection, "initial_import_complete", True)
         set_metadata(connection, "archive_pause_until", timestamp_now() + 86400)
         if connection.execute("PRAGMA foreign_key_check").fetchone():
             raise ValueError("Restored records failed referential-integrity verification.")

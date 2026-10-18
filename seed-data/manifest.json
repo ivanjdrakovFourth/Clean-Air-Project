@@ -1,0 +1,32 @@
+{
+  "format": "clean-air-source-seeds-v1",
+  "created": 1792361685,
+  "sources": {
+    "eea": {
+      "file": "eea.sqlite3",
+      "schema": 3,
+      "observations": 1006236,
+      "start": "2025-10-16",
+      "end": "2026-10-18",
+      "requested_start": "2025-10-18",
+      "history_complete": true,
+      "sha256": "61fbe80981deef49914eced4d4134012cde3a7a75503e336c5008a469a3ff780",
+      "archives": []
+    },
+    "openaq": {
+      "file": "openaq.sqlite3",
+      "schema": 3,
+      "observations": 1952195,
+      "start": "2025-10-18",
+      "end": "2026-10-18",
+      "requested_start": "2025-10-18",
+      "history_complete": true,
+      "sha256": "7fe466413d330509695011d0194c85d564233bde420777e1d8b301d65b1e724d",
+      "archives": []
+    }
+  },
+  "unavailable": {
+    "bg_direct": "No usable direct Bulgarian concentration feed has been verified; no history is fabricated."
+  },
+  "credential_notice": "No API credential, personal alert settings or API-quota history is included."
+}

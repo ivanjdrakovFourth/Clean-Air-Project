@@ -13,7 +13,7 @@ License: **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
 - [CC BY 4.0 license](https://creativecommons.org/licenses/by/4.0/)
 - [EEA general reuse policy and exceptions](https://www.eea.europa.eu/en/legal-notice)
 
-**Changes made:** selection of Bulgarian PM2.5/PM10 measurements, validation,
+**Changes made:** selection of supported Bulgarian particulate and gas measurements, validation,
 unit/interval normalization, city mapping, daily aggregation, coverage filtering
 and period ranking. These derived outputs are not official EEA assessments and
 do not imply endorsement by the EEA or European Commission.
@@ -21,6 +21,33 @@ do not imply endorsement by the EEA or European Commission.
 The public dataset record was inspected during implementation and identifies
 CC BY 4.0. Recheck source terms before adding another dataset or provider; the
 EEA's general site policy has third-party and item-specific exceptions.
+
+## OpenAQ and original upstream data owners
+
+[OpenAQ](https://openaq.org/) is a separate delivery source, not the owner of
+every observation it redistributes. Per-location provider, owner, license name,
+URL, permission fields and effective date windows returned by its
+[license API](https://docs.openaq.org/resources/licenses) are retained in each
+source database's `station_provider:*` metadata and in source-aware archives.
+They can be inspected in the Data Explorer.
+
+The verified catalog includes Open Data Commons Attribution (ODC-BY) and
+Creative Commons Attribution licenses. Keep the actual location-specific
+notices with redistributed databases and derived results; do not replace every
+owner's terms with one assumed OpenAQ license.
+
+- [Open Data Commons Attribution License 1.0](https://opendatacommons.org/licenses/by/1-0/)
+- [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+Only established modification/redistribution permissions are imported.
+Changes are disclosed: Bulgaria/support/quality filtering, mass-unit and UTC-hour
+normalization, local daily aggregation, coverage filtering and source-specific
+rankings. No OpenAQ/owner endorsement is implied. EEA-origin OpenAQ monitors
+retain EEA provenance rather than being described as independent confirmation.
+
+API credentials are not part of the data license. No key is redistributed with
+the repository or portable package. Recipients need their own local credential
+for future OpenAQ collection, not for queries of the prefilled measurements.
 
 ## Bulgarian official station location facts
 

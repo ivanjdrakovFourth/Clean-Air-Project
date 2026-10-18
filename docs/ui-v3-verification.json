@@ -1,0 +1,371 @@
+{
+  "browser": "System Microsoft Edge, headless",
+  "baseUrl": "http://127.0.0.1:8001",
+  "layouts": [
+    {
+      "route": "/",
+      "theme": "light",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/monitoring",
+      "theme": "light",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/alerts",
+      "theme": "light",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/data",
+      "theme": "light",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/docs",
+      "theme": "light",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/",
+      "theme": "light",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TBODY.",
+        "TR.winning-row",
+        "TD."
+      ]
+    },
+    {
+      "route": "/monitoring",
+      "theme": "light",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TR.",
+        "TD.",
+        "TD."
+      ]
+    },
+    {
+      "route": "/alerts",
+      "theme": "light",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": []
+    },
+    {
+      "route": "/data",
+      "theme": "light",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TR."
+      ]
+    },
+    {
+      "route": "/docs",
+      "theme": "light",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TBODY.",
+        "TR.",
+        "TD.",
+        "TR."
+      ]
+    },
+    {
+      "route": "/",
+      "theme": "light",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TBODY.",
+        "TR.winning-row"
+      ]
+    },
+    {
+      "route": "/monitoring",
+      "theme": "light",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TR.",
+        "TD."
+      ]
+    },
+    {
+      "route": "/alerts",
+      "theme": "light",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": []
+    },
+    {
+      "route": "/data",
+      "theme": "light",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH."
+      ]
+    },
+    {
+      "route": "/docs",
+      "theme": "light",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TBODY.",
+        "TR.",
+        "TD.",
+        "TR."
+      ]
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/monitoring",
+      "theme": "dark",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/alerts",
+      "theme": "dark",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/data",
+      "theme": "dark",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/docs",
+      "theme": "dark",
+      "width": 1440,
+      "documentWidth": 1440,
+      "overflowElements": []
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TBODY.",
+        "TR.winning-row",
+        "TD."
+      ]
+    },
+    {
+      "route": "/monitoring",
+      "theme": "dark",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TR.",
+        "TD.",
+        "TD."
+      ]
+    },
+    {
+      "route": "/alerts",
+      "theme": "dark",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": []
+    },
+    {
+      "route": "/data",
+      "theme": "dark",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TR."
+      ]
+    },
+    {
+      "route": "/docs",
+      "theme": "dark",
+      "width": 390,
+      "documentWidth": 390,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TBODY.",
+        "TR.",
+        "TD.",
+        "TR."
+      ]
+    },
+    {
+      "route": "/",
+      "theme": "dark",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TBODY.",
+        "TR.winning-row"
+      ]
+    },
+    {
+      "route": "/monitoring",
+      "theme": "dark",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TR.",
+        "TD."
+      ]
+    },
+    {
+      "route": "/alerts",
+      "theme": "dark",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": []
+    },
+    {
+      "route": "/data",
+      "theme": "dark",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "TR.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH.",
+        "TH."
+      ]
+    },
+    {
+      "route": "/docs",
+      "theme": "dark",
+      "width": 260,
+      "documentWidth": 260,
+      "overflowElements": [
+        "TABLE.",
+        "THEAD.",
+        "TR.",
+        "TH.",
+        "TBODY.",
+        "TR.",
+        "TD.",
+        "TR."
+      ]
+    }
+  ],
+  "pageErrors": [],
+  "combinedPanels": 3,
+  "openaqRawRowsVisible": true,
+  "savedThemeSurvivedReload": true,
+  "startupOnlyOkAndEscapeCannotCancel": true,
+  "delayedOlderDataIgnored": true,
+  "delayedOlderLocationsIgnored": true,
+  "delayedOlderMonitoringIgnored": true,
+  "exportUsedCurrentFilters": true,
+  "realAlertCreatedTriggeredAndDeleted": true,
+  "sourceDesktopPreferencePersisted": true
+}

@@ -1,0 +1,48 @@
+rule_files:
+  - '..\config\alerts.yml'
+evaluation_interval: 1m
+tests:
+  - name: Source staleness uses the configured threshold, not a fixed 48 hours
+    interval: 1m
+    input_series:
+      - series: 'up{job="clean-air-finder",instance="127.0.0.1:8000"}'
+        values: '1x30'
+      - series: 'clean_air_stale_after_seconds{job="clean-air-finder",instance="127.0.0.1:8000"}'
+        values: '3600x30'
+      - series: 'clean_air_source_data_age_seconds{job="clean-air-finder",instance="127.0.0.1:8000",source="openaq"}'
+        values: '7200x30'
+      - series: 'clean_air_source_cache_ready{job="clean-air-finder",instance="127.0.0.1:8000",source="openaq"}'
+        values: '1x30'
+      - series: 'clean_air_source_data_age_seconds{job="clean-air-finder",instance="127.0.0.1:8000",source="eea"}'
+        values: '100x30'
+      - series: 'clean_air_source_cache_ready{job="clean-air-finder",instance="127.0.0.1:8000",source="eea"}'
+        values: '1x30'
+      - series: 'clean_air_source_enabled{job="clean-air-finder",instance="127.0.0.1:8000",source="openaq"}'
+        values: '1x30'
+      - series: 'clean_air_source_worker_alive{job="clean-air-finder",instance="127.0.0.1:8000",source="openaq"}'
+        values: '0x30'
+      - series: 'clean_air_source_enabled{job="clean-air-finder",instance="127.0.0.1:8000",source="eea"}'
+        values: '1x30'
+      - series: 'clean_air_source_worker_alive{job="clean-air-finder",instance="127.0.0.1:8000",source="eea"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: CleanAirWorkerStopped
+        exp_alerts:
+          - exp_labels:
+              job: clean-air-finder
+              instance: 127.0.0.1:8000
+              source: openaq
+              severity: critical
+            exp_annotations:
+              summary: "Automatic collection is enabled but its worker has stopped."
+      - eval_time: 16m
+        alertname: CleanAirProviderDataStale
+        exp_alerts:
+          - exp_labels:
+              job: clean-air-finder
+              instance: 127.0.0.1:8000
+              source: openaq
+              severity: warning
+            exp_annotations:
+              summary: "A source-specific measurement cache is stale. Other sources are not substituted."

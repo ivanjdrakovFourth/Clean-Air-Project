@@ -11,3 +11,7 @@ vendor/
 !/var/data/
 /var/data/*
 !/var/data/clean_air.sqlite3
+!/seed-data/*.sqlite3
+/seed-data/*.sqlite3-shm
+/seed-data/*.sqlite3-wal
+/seed-data/*.part

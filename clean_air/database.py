@@ -4,14 +4,31 @@ import json
 import sqlite3
 import time
 from collections.abc import Iterator
-from contextlib import contextmanager, nullcontext
+from contextlib import closing, contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 
 from .shutdown_control import workspace_lock
 
-SCHEMA_VERSION = 2
-SCHEMA = """
+SCHEMA_VERSION = 3
+OBSERVATION_DEFINITION = """
+(
+    point_id TEXT NOT NULL REFERENCES sampling_points(id),
+    pollutant INTEGER NOT NULL CHECK (pollutant IN (1,5,7,8,10,6001)),
+    started INTEGER NOT NULL,
+    ended INTEGER NOT NULL,
+    value REAL,
+    aggregation TEXT NOT NULL CHECK (aggregation IN ('hour','day')),
+    validity INTEGER NOT NULL,
+    verification INTEGER NOT NULL,
+    result_time INTEGER NOT NULL,
+    data_capture REAL,
+    priority INTEGER NOT NULL,
+    file_id INTEGER NOT NULL REFERENCES import_files(id),
+    PRIMARY KEY (point_id,pollutant,started,aggregation)
+) WITHOUT ROWID
+"""
+SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS cities (name TEXT PRIMARY KEY);
 CREATE TABLE IF NOT EXISTS stations (
@@ -43,26 +60,13 @@ CREATE TABLE IF NOT EXISTS import_files (
     rows_imported INTEGER NOT NULL DEFAULT 0,
     window_start TEXT
 );
-CREATE TABLE IF NOT EXISTS observations (
-    point_id TEXT NOT NULL REFERENCES sampling_points(id),
-    pollutant INTEGER NOT NULL CHECK (pollutant IN (5, 6001)),
-    started INTEGER NOT NULL,
-    ended INTEGER NOT NULL,
-    value REAL,
-    aggregation TEXT NOT NULL CHECK (aggregation IN ('hour', 'day')),
-    validity INTEGER NOT NULL,
-    verification INTEGER NOT NULL,
-    result_time INTEGER NOT NULL,
-    data_capture REAL,
-    priority INTEGER NOT NULL,
-    file_id INTEGER NOT NULL REFERENCES import_files(id),
-    PRIMARY KEY (point_id, pollutant, started, aggregation)
-) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS observations {OBSERVATION_DEFINITION};
 CREATE INDEX IF NOT EXISTS observations_station_time
     ON observations(point_id, started);
 CREATE INDEX IF NOT EXISTS observations_retention ON observations(started);
 CREATE INDEX IF NOT EXISTS observations_hour_search
     ON observations(pollutant,aggregation,started,ended);
+CREATE INDEX IF NOT EXISTS observations_pollutant_time ON observations(pollutant,started);
 CREATE TABLE IF NOT EXISTS station_days (
     station_id TEXT NOT NULL REFERENCES stations(id),
     pollutant INTEGER NOT NULL,
@@ -74,6 +78,7 @@ CREATE TABLE IF NOT EXISTS station_days (
     PRIMARY KEY (station_id, pollutant, day)
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS station_days_query ON station_days(pollutant, day, station_id);
+CREATE INDEX IF NOT EXISTS station_days_retention ON station_days(day);
 CREATE TABLE IF NOT EXISTS collection_runs (
     id INTEGER PRIMARY KEY,
     started INTEGER NOT NULL,
@@ -95,11 +100,7 @@ CREATE TABLE IF NOT EXISTS archives (
 );
 """
 
-UPSERT_OBSERVATION = """
-INSERT INTO observations (
-    point_id, pollutant, started, ended, value, aggregation, validity,
-    verification, result_time, data_capture, priority, file_id
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+OBSERVATION_CONFLICT = """
 ON CONFLICT(point_id, pollutant, started, aggregation) DO UPDATE SET
     ended=excluded.ended, value=excluded.value, validity=excluded.validity,
     verification=excluded.verification, result_time=excluded.result_time,
@@ -108,6 +109,12 @@ WHERE excluded.priority > observations.priority
    OR (excluded.priority = observations.priority
        AND excluded.result_time >= observations.result_time)
 """
+UPSERT_OBSERVATION = """
+INSERT INTO observations (
+    point_id, pollutant, started, ended, value, aggregation, validity,
+    verification, result_time, data_capture, priority, file_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+""" + OBSERVATION_CONFLICT
 
 
 @contextmanager
@@ -126,21 +133,30 @@ def initialize(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with connect(path) as connection:
         version = connection.execute("PRAGMA user_version").fetchone()[0]
-        if version not in (0, 1, SCHEMA_VERSION):
+        if version not in (0, 1, 2, SCHEMA_VERSION):
             raise RuntimeError(
                 f"Unsupported database schema {version}; expected {SCHEMA_VERSION}. "
                 "Back up the database and use the matching application version."
             )
         with workspace_lock(path.parents[2]) if version < SCHEMA_VERSION else nullcontext():
-            if version == 1:
-                destination = path.parent.parent / "backups" / f"before-schema-2-{time.time_ns()}.sqlite3"
+            if version in (1, 2):
+                destination = path.parent.parent / "backups" / f"before-schema-3-{path.stem}-{time.time_ns()}.sqlite3"
                 backup(path, destination)
             if version == 0:
                 connection.execute("PRAGMA auto_vacuum=INCREMENTAL")
             connection.execute("PRAGMA journal_mode=WAL")
-            connection.executescript(SCHEMA)
-            connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
-            connection.commit()
+            migration = ""
+            if version in (1, 2):
+                migration = f"""
+                CREATE TABLE observations_upgrade {OBSERVATION_DEFINITION};
+                INSERT INTO observations_upgrade SELECT * FROM observations;
+                DROP TABLE observations;
+                ALTER TABLE observations_upgrade RENAME TO observations;
+                """
+            connection.executescript(
+                "BEGIN IMMEDIATE;\n" + migration + SCHEMA
+                + f"\nPRAGMA user_version={SCHEMA_VERSION};\nCOMMIT;"
+            )
 
 
 def set_metadata(connection: sqlite3.Connection, key: str, value: object) -> None:
@@ -156,6 +172,7 @@ def get_metadata(connection: sqlite3.Connection, key: str, default: object = Non
 
 
 def rebuild_station_days(connection: sqlite3.Connection, station_id: str) -> None:
+    provider = get_metadata(connection, "data_provider", "eea")
     rows = connection.execute(
         """
         SELECT o.* FROM observations o
@@ -186,13 +203,17 @@ def rebuild_station_days(connection: sqlite3.Connection, station_id: str) -> Non
             output.append(
                 (
                     station_id, pollutant, day, row["value"], row["data_capture"], 1,
-                    "validated daily" if row["priority"] == 2 else "provisional daily",
+                    "OpenAQ reported daily" if provider == "openaq"
+                    else "validated daily" if row["priority"] == 2 else "provisional daily",
                 )
             )
         else:
             values = hourly[key]
             mean = sum(row["value"] for row in values.values()) / len(values)
-            quality = "validated" if all(row["priority"] == 2 for row in values.values()) else "provisional"
+            quality = (
+                "OpenAQ reported" if provider == "openaq"
+                else "validated" if all(row["priority"] == 2 for row in values.values()) else "provisional"
+            )
             output.append(
                 (station_id, pollutant, day, mean, len(values) / 24, len(values), f"{quality} hourly")
             )
@@ -201,7 +222,7 @@ def rebuild_station_days(connection: sqlite3.Connection, station_id: str) -> Non
 
 def backup(source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with connect(source) as connection, sqlite3.connect(destination) as target:
+    with connect(source) as connection, closing(sqlite3.connect(destination)) as target:
         connection.backup(target)
         result = target.execute("PRAGMA integrity_check").fetchone()[0]
         if result != "ok":

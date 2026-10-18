@@ -12,6 +12,9 @@ const target = document.getElementById("target");
 const objective = document.getElementById("objective");
 const locationFilter = document.getElementById("location");
 const changeNotice = document.getElementById("search-change-notice");
+const selectedSource = document.getElementById("source");
+const sourceSelection = document.getElementById("source-selection");
+let sourceMetadataVersion = 0;
 
 function updateReference() {
   const custom = profile.value === "custom";
@@ -21,6 +24,11 @@ function updateReference() {
 }
 
 function updateSettings() {
+  sourceSelection.hidden = selectedSource.value !== "combined";
+  for (const checkbox of sourceSelection.querySelectorAll("input")) checkbox.disabled = sourceSelection.hidden;
+  const sourceBoxes = [...sourceSelection.querySelectorAll("input")];
+  sourceBoxes[0].setCustomValidity(selectedSource.value === "combined" && !sourceBoxes.some(item => item.checked)
+    ? "Select at least one source store." : "");
   for (const group of locationFilter.querySelectorAll("optgroup")) {
     const active = group.dataset.view === view.value;
     group.hidden = !active;
@@ -37,7 +45,8 @@ function updateSettings() {
   document.getElementById("definition-help").textContent = target.value === "locations"
     ? descriptions[objective.value]
     : "Finds the lowest measured day/hour within your dates. Choose lowest pollution as the definition. Hourly searches cannot reconstruct hours from daily-only history.";
-  button.textContent = objective.value === "improvement" ? "Compare improvement \u2192"
+  button.textContent = selectedSource.value === "combined" ? "Compare sources \u2192"
+    : objective.value === "improvement" ? "Compare improvement \u2192"
     : objective.value === "reference_days" ? "Compare reference days \u2192"
     : "Find cleanest air \u2192";
 }
@@ -54,6 +63,32 @@ profile.addEventListener("change", updateReference);
 view.addEventListener("change", updateSettings);
 target.addEventListener("change", updateSettings);
 objective.addEventListener("change", updateSettings);
+selectedSource.addEventListener("change", async () => {
+  const version = ++sourceMetadataVersion;
+  locationFilter.value = "";
+  updateSettings();
+  const requestedSource = selectedSource.value;
+  try {
+    const response = await fetch(`/api/status?source=${encodeURIComponent(requestedSource)}`, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) throw new Error(`Source state unavailable (${response.status}).`);
+    const status = await response.json();
+    if (version !== sourceMetadataVersion || selectedSource.value !== requestedSource) return;
+    const stationGroup = locationFilter.querySelector('[data-view="stations"]');
+    const cityGroup = locationFilter.querySelector('[data-view="cities"]');
+    stationGroup.replaceChildren(...(status.official_stations || []).map(item => new Option(item.name, item.id)));
+    cityGroup.replaceChildren(...(status.cities || []).map(city => new Option(city, city)));
+    const minimum = status.available_start || "", maximum = status.available_end || "";
+    for (const name of ["start", "end"]) { document.getElementById(name).min = minimum; document.getElementById(name).max = maximum; }
+    panel.dataset.ready = status.ready ? "true" : "false";
+    document.getElementById("collection-title").textContent = `${status.source_name}: ${status.ready ? "local cache available" : "waiting for measurements"}`;
+    document.getElementById("collection-message").textContent = status.reason || status.collection?.message || "Inspect Monitoring for this source's own coverage.";
+  } catch (error) {
+    if (version !== sourceMetadataVersion) return;
+    console.error("Source metadata could not be loaded:", error);
+    document.getElementById("collection-message").textContent = error.message;
+  }
+});
+sourceSelection.addEventListener("change", updateSettings);
 updateReference();
 updateSettings();
 
@@ -100,11 +135,17 @@ form.addEventListener("submit", async (event) => {
 });
 
 async function updateStatus() {
+  const requestedSource = selectedSource.value;
+  const version = sourceMetadataVersion;
   try {
-    const response = await fetch("/api/status", { signal: AbortSignal.timeout(10000) });
+    const response = await fetch(`/api/status?source=${encodeURIComponent(requestedSource)}`, { signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error(`Status request failed (${response.status}).`);
     const status = await response.json();
-    if (status.ready && panel.dataset.ready !== "true") {
+    if (version !== sourceMetadataVersion || selectedSource.value !== requestedSource) {
+      window.setTimeout(updateStatus, 15000);
+      return;
+    }
+    if (status.ready && panel.dataset.ready !== "true" && changeNotice.hidden) {
       window.location.reload();
       return;
     }
@@ -119,15 +160,14 @@ async function updateStatus() {
     }
     panel.dataset.lastSuccess = lastSuccess;
     const collection = status.collection;
-    document.getElementById("collection-title").textContent = status.ready
-      ? "Your local history is ready"
-      : "Preparing your real-data history";
-    const message = status.collection_enabled
+    document.getElementById("collection-title").textContent =
+      `${status.source_name}: ${status.ready ? "local cache available" : "waiting for source measurements"}`;
+    const message = status.reason || (status.collection_enabled
       ? (collection?.message || "Waiting for collection to begin.")
       : ("Automatic updates are disabled. " + (status.ready
-        ? "Using your stored history."
+        ? "Using this source's stored history."
         : "Enable collection or run the sync command to import real history.")
-        + (collection?.status === "failed" ? ` Last collection failed: ${collection.message}` : ""));
+        + (collection?.status === "failed" ? ` Last collection failed: ${collection.message}` : "")));
     document.getElementById("collection-message").textContent = message
       + (status.source_stale ? " The newest stored measurement is stale." : "");
     panel.classList.toggle("attention", status.source_stale || collection?.status === "failed");

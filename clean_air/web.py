@@ -17,12 +17,14 @@ from pydantic import ValidationError
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from . import __version__
-from .collector import Collector
+from .alerts import AlertEngine
 from .comparison import ComparisonError, Search, compare, status_snapshot
-from .database import initialize
+from .maintenance import MaintenanceWorker
 from .metrics import Metrics
-from .settings import Settings, load_settings
-from .station_catalog import apply_catalog
+from .provider_store import prepare_sources
+from .settings import POLLUTANTS, Settings, SourceChoice, load_settings
+from .source_workers import SourceWorkers
+from .ui_routes import attach_ui
 
 LOGGER = logging.getLogger(__name__)
 
@@ -30,10 +32,11 @@ LOGGER = logging.getLogger(__name__)
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     settings.prepare_directories()
-    initialize(settings.database)
-    apply_catalog(settings.database, settings.root / "config" / "bulgarian-stations.json")
+    prepare_sources(settings)
     metrics = Metrics()
-    collector = Collector(settings, metrics)
+    collector = SourceWorkers(settings, metrics)
+    alerts = AlertEngine(settings)
+    maintenance = MaintenanceWorker(settings)
     templates = Jinja2Templates(directory=str(settings.root / "clean_air" / "templates"))
     templates.env.filters["utc"] = lambda value: (
         datetime.fromtimestamp(value, UTC).strftime("%d %b %Y, %H:%M UTC") if value else "Not yet"
@@ -41,16 +44,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
+        collector.notices.begin(collector.available_sources())
         if settings.options.collection.enabled:
             collector.start()
+        if settings.options.alerts.enabled:
+            alerts.start()
+        maintenance.start()
         try:
             yield
         finally:
+            maintenance.stop()
+            alerts.stop()
             collector.stop()
 
     app = FastAPI(
         title="Clean Air Finder",
-        description="Historical Bulgarian air-quality comparisons from locally stored EEA measurements.",
+        description="Source-specific Bulgarian air-quality comparisons, alerts and monitoring using locally stored measurements.",
         version=__version__,
         lifespan=lifespan,
         docs_url=None,
@@ -59,6 +68,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.collector = collector
     app.state.metrics = metrics
+    app.state.alerts = alerts
+    app.state.maintenance = maintenance
+    attach_ui(app, settings, templates, collector, alerts, maintenance)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost"])
     app.mount(
         "/static", StaticFiles(directory=str(settings.root / "clean_air" / "static")), name="static"
@@ -129,28 +141,36 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "result": None, "error": {"message": error.message, "details": error.details}
             }, error.status
 
-    def browser_values(request: Request, snapshot: dict) -> dict[str, str]:
+    def browser_values(request: Request, snapshot: dict) -> dict:
         options = settings.options.comparison
         values = {
             "pollutant": options.default_pollutant, "profile": "who_2021",
             "view": options.default_view, "objective": options.default_objective,
             "target": options.default_target,
+            "source": settings.options.sources.default, "monitor_class": "all",
+            "allow_partial_history": request.query_params.get("allow_partial_history", "").lower() in ("1", "true", "on"),
         }
         for name in (
             "start", "end", "pollutant", "profile", "threshold", "view", "objective",
             "target", "location",
+            "source", "monitor_class",
         ):
             if name in request.query_params and request.query_params[name] != "":
                 values[name] = request.query_params[name]
+        if values["source"] == "combined":
+            values["sources"] = request.query_params.getlist("sources") or ["eea", "openaq", "bg_direct"]
         return values
 
     @app.get("/", response_class=HTMLResponse, include_in_schema=False)
     def index(request: Request):
-        snapshot = status_snapshot(settings)
+        source = request.query_params.get("source", settings.options.sources.default)
+        if source not in ("eea", "openaq", "bg_direct", "combined"):
+            raise ComparisonError("UNKNOWN_SOURCE", "Choose a configured source.")
+        snapshot = status_snapshot(settings, source)
         values = browser_values(request, snapshot)
         context = {"result": None, "error": None}
         status_code = 200
-        if snapshot["ready"]:
+        if snapshot["application_ready"]:
             context, status_code = search_context(values)
         return templates.TemplateResponse(
             request=request,
@@ -158,13 +178,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             context={
                 "snapshot": snapshot, "values": values, "settings": settings,
                 "version": __version__, **context,
+                "pollutants": list(POLLUTANTS),
             },
             status_code=status_code,
         )
 
     @app.get("/results", response_class=HTMLResponse, include_in_schema=False)
     def results_fragment(request: Request):
-        snapshot = status_snapshot(settings)
+        source = request.query_params.get("source", settings.options.sources.default)
+        if source not in ("eea", "openaq", "bg_direct", "combined"):
+            raise ComparisonError("UNKNOWN_SOURCE", "Choose a configured source.")
+        snapshot = status_snapshot(settings, source)
         context, status = search_context(browser_values(request, snapshot))
         return templates.TemplateResponse(
             request=request, name="results.html", context=context, status_code=status
@@ -179,13 +203,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         snapshot = status_snapshot(settings)
         return templates.TemplateResponse(
             request=request, name="docs.html",
-            context={"snapshot": snapshot, "settings": settings, "version": __version__},
+            context={
+                "snapshot": snapshot, "settings": settings, "version": __version__,
+            },
         )
 
     @app.get("/api/status", tags=["Operations"])
-    def collection_status():
-        snapshot = status_snapshot(settings)
+    def collection_status(source: SourceChoice | None = None):
+        snapshot = status_snapshot(settings, source)
         snapshot["worker_running"] = bool(collector.thread and collector.thread.is_alive())
+        snapshot["source_workers"] = collector.states()
         return snapshot
 
     @app.get("/health/live", tags=["Operations"])
@@ -204,6 +231,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def prometheus_metrics():
         metrics.worker_alive.set(bool(collector.thread and collector.thread.is_alive()))
         metrics.worker_expected.set(settings.options.collection.enabled)
+        for provider in ("eea", "openaq", "bg_direct"):
+            metrics.source_workers.labels(provider).set(collector.states().get(provider, False))
         metrics.refresh(settings)
         return Response(generate_latest(metrics.registry), media_type=CONTENT_TYPE_LATEST)
 

@@ -1,0 +1,27 @@
+<section class="comparison-summary">
+  <p class="eyebrow">COMPARE SELECTED SOURCES &middot; {{ result.pollutant }}</p>
+  <h2>What the sources show</h2>
+  <p>Each panel below searches its own stored history. Results are not averaged into a new answer.</p>
+  {% if result.agreement.available_sources | length < 2 %}
+  <p class="status-message waiting">Only one selected source can answer. There is not enough evidence to claim cross-source agreement.</p>
+  {% elif not result.agreement.same_time_window %}
+  <p class="status-message waiting">No common eligible reported hour was available. Source answers use their own displayed times; numeric agreement is not claimed.</p>
+  {% elif result.agreement.shared_top_result %}
+  <p class="status-message good">The available sources share a top-ranked city/location or time for this request.</p>
+  {% else %}
+  <p class="status-message waiting">The available sources have different top-ranked results. Compare their coverage, monitor classes and timestamps below.</p>
+  {% endif %}
+  <p class="note">{{ result.agreement.independence_notice }}</p>
+  {% if result.agreement.matched_measurements %}
+  <details class="details-card"><summary>Compare matched physical-station measurements</summary><p>{{ result.agreement.scope }} {{ result.agreement.numeric_rule }}</p>
+    <div class="table-scroll"><table><thead><tr><th>Station</th><th>EEA mean</th><th>OpenAQ mean</th><th>OpenAQ minus EEA</th><th>Shared days</th><th>Interpretation</th></tr></thead><tbody>
+    {% for pair in result.agreement.matched_measurements %}<tr><th>{{ pair.name }} <small>{{ pair.station_id }}</small></th><td>{{ "%.3f" | format(pair.eea_mean) }}</td><td>{{ "%.3f" | format(pair.openaq_mean) }}</td><td>{% if pair.comparable %}{{ "%+.3f" | format(pair.difference) }}{% else %}Not comparable{% endif %}</td><td>{{ pair.shared_days if pair.shared_days is not none else 'Same hour' }}</td><td>{% if not pair.comparable %}Insufficient common qualifying days{% elif pair.within_display_tolerance %}Within display tolerance{% else %}Different reported means{% endif %}{% if pair.shared_upstream %}; same upstream EEA network{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </details>
+  {% else %}<p class="note">Detailed numeric agreement needs comparable matched physical stations and lowest-concentration ranking. City networks, improvement baselines and listed time-result scopes can differ.</p>{% endif %}
+</section>
+{% for panel in result.panels %}
+<section class="source-result-panel"><h2>{{ panel.name }}</h2>
+  {% with result=panel.result, error=panel.error %}{% include "results.html" %}{% endwith %}
+</section>
+{% endfor %}

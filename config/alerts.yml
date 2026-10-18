@@ -16,7 +16,7 @@ groups:
         annotations:
           summary: "Collection failed. Stored history remains searchable; inspect var/logs."
       - alert: CleanAirWorkerStopped
-        expr: clean_air_worker_expected == 1 and clean_air_worker_alive == 0
+        expr: clean_air_source_enabled == 1 and clean_air_source_worker_alive == 0
         for: 1m
         labels:
           severity: critical
@@ -29,3 +29,17 @@ groups:
           severity: warning
         annotations:
           summary: "The latest stored source measurement is stale."
+      - alert: CleanAirProviderCollectionNeedsAttention
+        expr: clean_air_source_collection_healthy == 0 and clean_air_source_enabled == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A configured source has a failed, partial or missing collection. Inspect in-app Monitoring."
+      - alert: CleanAirProviderDataStale
+        expr: clean_air_source_data_age_seconds > on(job, instance) group_left clean_air_stale_after_seconds and clean_air_source_cache_ready == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "A source-specific measurement cache is stale. Other sources are not substituted."

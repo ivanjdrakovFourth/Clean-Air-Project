@@ -10,8 +10,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ROOT = Path(__file__).resolve().parents[1]
-POLLUTANTS = {"PM2.5": 6001, "PM10": 5}
+POLLUTANTS = {"PM2.5": 6001, "PM10": 5, "NO2": 8, "O3": 7, "SO2": 1, "CO": 10}
 POLLUTANT_NAMES = {value: key for key, value in POLLUTANTS.items()}
+Pollutant = Literal["PM2.5", "PM10", "NO2", "O3", "SO2", "CO"]
+Provider = Literal["eea", "openaq", "bg_direct"]
+SourceChoice = Literal["eea", "openaq", "bg_direct", "combined"]
 EEA_API = "https://eeadmz1-downloads-api-appservice.azurewebsites.net"
 EEA_BLOB_HOST = "eeadmz1batchservice02.blob.core.windows.net"
 EEA_DATA_URL = "https://eeadata.github.io/AQ.Portal/pages/download-data.html"
@@ -39,7 +42,7 @@ class CollectionOptions(StrictModel):
 class ComparisonOptions(StrictModel):
     minimum_hourly_coverage: float = Field(default=0.75, ge=0.5, le=1)
     minimum_period_coverage: float = Field(default=0.90, ge=0.5, le=1)
-    default_pollutant: Literal["PM2.5", "PM10"] = "PM2.5"
+    default_pollutant: Pollutant = "PM2.5"
     default_view: Literal["cities", "stations"] = "cities"
     default_objective: Literal["average", "reference_days", "improvement"] = "average"
     default_target: Literal["locations", "day", "hour"] = "locations"
@@ -57,12 +60,32 @@ class RetentionOptions(StrictModel):
     active_months: Literal[36] = 36
 
 
+class SourceOptions(StrictModel):
+    default: SourceChoice = "eea"
+
+
+class OpenAQOptions(StrictModel):
+    enabled: bool = True
+    include_community: bool = True
+    requests_per_minute: int = Field(default=45, ge=1, le=60)
+    requests_per_cycle: int = Field(default=1900, ge=1, le=1900)
+    revision_days: int = Field(default=7, ge=1, le=30)
+    history_months: int | None = Field(default=None, ge=12, le=36)
+
+
+class AlertOptions(StrictModel):
+    enabled: bool = True
+
+
 class Options(StrictModel):
     app: AppOptions = Field(default_factory=AppOptions)
     collection: CollectionOptions = Field(default_factory=CollectionOptions)
     comparison: ComparisonOptions = Field(default_factory=ComparisonOptions)
     monitoring: MonitoringOptions = Field(default_factory=MonitoringOptions)
     retention: RetentionOptions = Field(default_factory=RetentionOptions)
+    sources: SourceOptions = Field(default_factory=SourceOptions)
+    openaq: OpenAQOptions = Field(default_factory=OpenAQOptions)
+    alerts: AlertOptions = Field(default_factory=AlertOptions)
 
     @model_validator(mode="after")
     def different_ports(self) -> Options:
@@ -81,9 +104,16 @@ class Reference(StrictModel):
     pm10_daily: float = Field(gt=0)
     pm25_annual: float = Field(gt=0)
     pm10_annual: float = Field(gt=0)
+    no2_daily: float = Field(default=25, gt=0)
+    so2_daily: float = Field(default=40, gt=0)
+    co_daily: float = Field(default=4000, gt=0)
 
-    def daily_threshold(self, pollutant: str) -> float:
-        return self.pm25_daily if pollutant == "PM2.5" else self.pm10_daily
+    def daily_threshold(self, pollutant: str) -> float | None:
+        return {
+            "PM2.5": self.pm25_daily, "PM10": self.pm10_daily,
+            "NO2": self.no2_daily, "SO2": self.so2_daily, "CO": self.co_daily,
+            "O3": None,
+        }[pollutant]
 
 
 @dataclass(frozen=True)
@@ -91,6 +121,7 @@ class Settings:
     root: Path
     options: Options
     reference: Reference
+    provider: Provider = "eea"
 
     @property
     def var(self) -> Path:
@@ -98,11 +129,18 @@ class Settings:
 
     @property
     def database(self) -> Path:
-        return self.var / "data" / "clean_air.sqlite3"
+        name = "clean_air.sqlite3" if self.provider == "eea" else f"{self.provider}.sqlite3"
+        return self.var / "data" / name
+
+    @property
+    def archive_directory(self) -> Path:
+        directory = self.var / "archives"
+        return directory if self.provider == "eea" else directory / self.provider
 
     def prepare_directories(self) -> None:
         for name in ("data", "logs", "cache", "archives", "backups", "run", "tmp", "reports"):
             (self.var / name).mkdir(parents=True, exist_ok=True)
+        self.archive_directory.mkdir(parents=True, exist_ok=True)
 
 
 def load_settings(root: Path = ROOT) -> Settings:

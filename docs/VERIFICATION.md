@@ -1,5 +1,150 @@
 # Verification record
 
+## Version 3 verification
+
+Verified on **2026-10-18 UTC** on the shared Windows 11 development machine.
+**204 offline regression tests and Ruff pass**, including native Prometheus
+rule behavior. The existing upstream Starlette/HTTPX test-client deprecation
+warning remains non-blocking.
+
+Version 3 uses the original assignment's **at least 12 months of stored history**
+and **archive older than 36 months** requirements. Actual published source row
+counts, date bounds, schema versions and SHA-256 values are recorded in the
+[source seed manifest](../seed-data/manifest.json), not inferred from one
+sensor's earliest date. There is no fabricated Bulgarian-direct history.
+
+| Prefilled source | Raw observations | Requested historical start | Status |
+|---|---:|---|---|
+| EEA | 1,006,236 | 2025-10-18 UTC | Complete requested import; additional earlier retained days remain. |
+| OpenAQ | 1,952,195 | 2025-10-18 UTC | All 433 sensor checkpoints complete, including legitimately inactive lifetimes. |
+| Bulgarian direct | 0 | Not available | No usable concentration feed; no copied EEA or fake measurements. |
+
+Raw counts include excluded source records, not only ranking-eligible values.
+Attempting every available source window is not a promise that every city,
+pollutant and date has 90% qualifying coverage.
+
+### Functional and data checks
+
+- Source histories, file identifiers, archives, queries and alert baselines are
+  physically/provider isolated. A failed source does not borrow EEA records.
+- OpenAQ completion requires the configured window and every catalogued sensor
+  checkpoint, including explicit empty checkpoints for lifetimes outside the
+  window. Unfinished publication is rejected.
+- Seed merge verifies hash, schema, provider, counts and bounds, maps file IDs by
+  URL, preserves equal/newer local revisions and rejects point reassignment.
+  A 12-month seed does not certify a larger unfinished request.
+- Shared copies remove quota timestamps, private operational metadata and
+  collection-run messages, and are vacuumed. API credentials and personal
+  alert rules/events are not included.
+- Actual schema-2 pollutant constraints are exercised before schema-3 migration;
+  existing observations and the pre-migration backup survive.
+- Alerts test independent sources, initial baselines, threshold equality,
+  cleaner/dirtier direction, unchanged-result deduplication, completed-refresh
+  gating, edits/deletion and desktop requested/failed persistence.
+- Startup tests verify that collectors run without a browser acknowledgement,
+  separate source outcomes never call partial/unavailable data up to date, and
+  a simulated multi-year absence resumes before the moving last-year boundary.
+  Cold archives and their source-specific Explorer index travel with Git seeds;
+  conflicting local archive files are not overwritten.
+- Native `promtool test rules` verifies custom provider-staleness thresholds and
+  a stopped OpenAQ worker independently of a healthy EEA worker. All six
+  platform rules also pass native syntax validation.
+
+### Browser checks
+
+System Microsoft Edge was driven headlessly with development-only Playwright;
+neither Node nor Playwright is an application dependency. All five normal menus
+passed light/dark checks at **1440, 390 and 260 CSS pixels**, with no
+document-level horizontal overflow and no page JavaScript errors. Wide data
+tables retain their own horizontal scrolling.
+
+The browser also verified selected-source panels including the unavailable
+direct feed, source-specific raw data, persistent themes and an actual CSV
+download using newly changed source/date filters. Deliberately delayed older
+responses could not overwrite newer selected-source rows, station choices or
+monitoring-pollutant results.
+
+The earlier real Windows desktop test was accepted as **requested**, not claimed
+to have been seen. Rule creation/removal, archive job outcomes and raw-table
+pagination were also exercised through the interface.
+
+### Performance process
+
+The repeatable HTTP workload covers all six pollutants, one day, 30 days,
+12 months and the latest comparable hour, with 100 requests per case and four
+concurrent clients. Responses are shape-validated; legitimate unavailable
+coverage is recorded separately, not called a successful city comparison.
+Target: p95 below 300 ms on the shared Windows development machine.
+
+Initial combined-current measurement exceeded the target. Profiling identified
+duplicate source-status reads and repeated queries for sources already on the
+common hour. The implementation now reuses request-local snapshots and only
+requeries sources requiring a different hour. No persistent query-result cache,
+cross-source blending or stale-current fallback was introduced. Regression
+tests verify equal-hour reuse, realignment when source winners differ and no
+numeric agreement when no common hour exists.
+
+Final per-source HTTP reports and clean-copy delivery evidence accompany this
+record. Earlier version-1/2 numbers below are historical, not version-3 claims.
+
+| Source mode | Cases / requests | Minimum case p95 | Maximum case p95 | Target met |
+|---|---:|---:|---:|---|
+| EEA | 24 / 2,400 | 87.305 ms | 126.165 ms | Yes |
+| OpenAQ | 24 / 2,400 | 70.321 ms | 159.174 ms | Yes |
+| Selected EEA + OpenAQ | 24 / 2,400 | 174.139 ms | 269.307 ms | Yes |
+
+These are complete localhost HTTP requests against frozen real source stores,
+with bundled Prometheus running. No provider network call runs per comparison.
+The source-specific OpenAQ workload includes **1,200 honest
+`NO_ELIGIBLE_CITY` responses**, not fabricated winners where provider data fails
+the selected coverage policy. Combined responses retain an explicit unavailable
+OpenAQ panel where needed. The reports preserve each case's outcome separately.
+Indexed earliest/latest day lookups additionally removed full rollup-table scans
+from the shared-current path.
+
+### Independent second calculation
+
+A separate SQL window-function/Python oracle imported **no application
+calculation helpers**. It reconstructed station/day means from raw measurements,
+verified stored rollups, independently calculated eligible city means/winners,
+checked current common-hour results and confirmed unavailable direct-source
+requests never fall back to EEA. All **54 source/pollutant/time-mode checks passed**.
+This cross-check is independent of the unit fixtures and their calculation code.
+
+Evidence:
+
+- [EEA HTTP measurements](benchmark-v3-eea-http.json)
+- [OpenAQ HTTP measurements](benchmark-v3-openaq-http.json)
+- [Combined HTTP measurements](benchmark-v3-combined-http.json)
+- [Native browser and startup-dialog checks](ui-v3-verification.json)
+- [Independent raw-data calculations](raw-data-v3-verification.json)
+
+### Exact portable artifact and clean extraction
+
+The final 257,902,767-byte Windows ZIP was scanned for the actual local
+credential in memory, CRC-checked and extracted into a new folder containing
+spaces. Its exact SHA-256 and post-build checks are in
+[portable-v3-verification.json](portable-v3-verification.json). This certificate
+is recorded after packaging rather than embedding a self-referential ZIP hash.
+
+The actual copied launcher started on port 8001 using only the copied runtime.
+OpenAQ history was ready and searchable with **no OpenAQ credential**. All
+**204 packaged tests and lint passed**; the separate raw-data oracle again
+passed **54 checks** against the extracted stores/API. Bundled Prometheus used
+the relocated `127.0.0.1:8001/metrics` target.
+
+The extracted interface passed the complete native browser workflow, including
+OK-only startup acknowledgement, optional source-notification preference
+persistence and creating a real rule that triggered through the background
+worker and was then removed. Actual queued diagnostics, an integrity-checked
+OpenAQ backup/download, a truthful zero-old-record retention job and a source
+benchmark all completed successfully.
+
+This remains a same-machine Windows relocation test, not a claim of a clean
+Windows VM, every organization policy, or guaranteed upstream availability.
+
+## Historical verification: versions 1 and 2
+
 Verified on **2026-10-16 UTC** on the shared Windows 11 development machine.
 These are measured results, not promises for every machine or dataset.
 

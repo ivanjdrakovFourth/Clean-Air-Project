@@ -6,32 +6,20 @@
   <meta name="description" content="Find the Bulgarian city with the lowest historical air pollution, using real EEA measurements stored locally.">
   <title>Clean Air Finder &mdash; a clearer place to call home</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="/static/theme.js"></script>
   <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/ui.js" defer></script>
   <script src="/static/app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#search">Skip to comparison</a>
-  <header class="site-header shell">
-    <a class="brand" href="/" aria-label="Clean Air Finder home">
-      <span class="brand-icon" aria-hidden="true">
-        <svg viewBox="0 0 32 32"><path d="M25 6C12 4 5 10 7 20c9 4 18-2 18-14Z"/><path d="M7 26 21 12"/></svg>
-      </span>
-      <span>clean air<span class="brand-light"> finder</span></span>
-    </a>
-    <nav aria-label="Main navigation">
-      <a href="#methodology">How it works</a>
-      <a href="/docs">API</a>
-      {% if settings.options.monitoring.enabled %}
-      <a href="http://127.0.0.1:{{ settings.options.monitoring.port }}/" target="_blank" rel="noopener">Monitoring <span aria-hidden="true">&nearr;</span></a>
-      {% endif %}
-    </nav>
-  </header>
+  {% include "navigation.html" %}
   <main class="shell">
     <section class="hero">
       <div class="hero-copy">
         <p class="eyebrow"><span class="small-dot"></span> REAL MEASUREMENTS. A CLEARER PICTURE.</p>
         <h1>A little more clarity.<br>A little <span>cleaner air.</span></h1>
-        <p class="hero-description">Find the cleanest measured air at Bulgaria's official monitoring stations. Compare the latest reported hour, or choose historical dates. Real measurements, named locations and a clear explanation.</p>
+        <p class="hero-description">Find the cleanest measured city, with the actual monitor locations behind the answer. Choose a source or compare several, now or in history. Each source keeps its own records; sources are never silently blended.</p>
         <div class="hero-facts"><span>Public EEA data</span><span>Stored on your computer</span><span>No account needed</span></div>
       </div>
       <div class="landscape" aria-hidden="true">
@@ -49,9 +37,9 @@
     <section id="collection-panel" class="collection-panel{% if snapshot.source_stale or (snapshot.collection and snapshot.collection.status == 'failed') %} attention{% endif %}" data-ready="{{ 'true' if snapshot.ready else 'false' }}" data-last-success="{{ snapshot.last_success or 0 }}" aria-live="polite">
       <div class="status-dot{% if not snapshot.ready %} pending{% endif %}"></div>
       <div>
-        <strong id="collection-title">{% if snapshot.ready %}Your local history is ready{% else %}Preparing your real-data history{% endif %}</strong>
+        <strong id="collection-title">{{ snapshot.source_name }} &middot; {% if snapshot.ready %}local data available{% else %}waiting for source data{% endif %}</strong>
         <p id="collection-message">
-          {% if not snapshot.collection_enabled %}Automatic updates are disabled. {% if snapshot.ready %}Using your stored history.{% else %}Enable collection in config\settings.toml or run the sync command to import real history.{% endif %}{% if snapshot.collection and snapshot.collection.status == 'failed' %} Last collection failed: {{ snapshot.collection.message }}{% endif %}{% elif snapshot.collection %}{{ snapshot.collection.message }}{% else %}The first collection will begin shortly.{% endif %}
+          {% if snapshot.reason %}{{ snapshot.reason }}{% elif not snapshot.collection_enabled %}Automatic updates are disabled. {% if snapshot.ready %}Using this source's stored history.{% else %}No imported source history is available yet.{% endif %}{% elif snapshot.collection %}{{ snapshot.collection.message }}{% else %}The first collection will begin shortly.{% endif %}
           {% if snapshot.source_stale %} The newest stored measurement is stale.{% endif %}
           {% if snapshot.ready %} Last successful import: {{ snapshot.last_success | utc }}.{% endif %}
         </p>
@@ -62,32 +50,36 @@
     <section class="search-card" id="search" aria-labelledby="search-title">
       <div class="section-heading">
         <div><p class="eyebrow">FIND CLEANER AIR</p><h2 id="search-title">Where is the cleanest measured air?</h2></div>
-        <span class="subtle-tag">Official Bulgarian stations</span>
+        <span class="subtle-tag">Source-specific history</span>
       </div>
       <form id="search-form" action="/" method="get">
         <div class="form-grid">
+          <div class="field"><label for="source">Measurement source</label><select id="source" name="source"><option value="eea"{% if values.source == 'eea' %} selected{% endif %}>EEA &middot; Bulgarian official observations</option><option value="openaq"{% if values.source == 'openaq' %} selected{% endif %}>OpenAQ &middot; labelled upstream providers</option><option value="bg_direct"{% if values.source == 'bg_direct' %} selected{% endif %}>Bulgarian direct &middot; feed unavailable</option><option value="combined"{% if values.source == 'combined' %} selected{% endif %}>Compare selected sources</option></select></div>
           <div class="field"><label for="start">From <span class="label-note">(optional)</span></label><input id="start" name="start" type="date" value="{{ values.get('start', '') }}" min="{{ snapshot.available_start or '' }}" max="{{ snapshot.available_end or '' }}" aria-describedby="date-help"></div>
           <div class="field"><label for="end">To <span class="label-note">(inclusive)</span></label><input id="end" name="end" type="date" value="{{ values.get('end', '') }}" min="{{ snapshot.available_start or '' }}" max="{{ snapshot.available_end or '' }}" aria-describedby="date-help"></div>
-          <div class="field"><label for="pollutant">Compare by</label><select id="pollutant" name="pollutant"><option value="PM2.5"{% if values.pollutant == 'PM2.5' %} selected{% endif %}>PM2.5 &middot; fine particles</option><option value="PM10"{% if values.pollutant == 'PM10' %} selected{% endif %}>PM10 &middot; particles</option></select></div>
+          <div class="field"><label for="pollutant">Compare by</label><select id="pollutant" name="pollutant">{% for pollutant in pollutants %}<option value="{{ pollutant }}"{% if values.pollutant == pollutant %} selected{% endif %}>{{ pollutant }}{% if pollutant == 'PM2.5' %} &middot; fine particles{% elif pollutant == 'PM10' %} &middot; particles{% endif %}</option>{% endfor %}</select></div>
         </div>
         <p id="date-help" class="note">Leave both dates blank for the latest comparable reported hour. Set both dates for history; use the same date for one day. All times are UTC.</p>
+        <fieldset id="source-selection" class="source-selection"{% if values.source != 'combined' %} hidden{% endif %}><legend>Include these source stores</legend>{% for provider,label in provider_names.items() %}<label><input type="checkbox" name="sources" value="{{ provider }}"{% if provider in values.get('sources', ['eea','openaq','bg_direct']) %} checked{% endif %}{% if values.source != 'combined' %} disabled{% endif %}> {{ label }}</label>{% endfor %}<small>Each selected source returns its own result or an explicit unavailable status. No source's history is substituted.</small></fieldset>
         <details class="search-settings"{% if values.objective != 'average' or values.target != 'locations' or values.profile == 'custom' or values.get('location') %} open{% endif %}>
           <summary>Search settings <span>Location detail, definition and cleanest time</span></summary>
           <div class="settings-grid">
-            <div class="field"><label for="view">Comparison view</label><select id="view" name="view"><option value="stations"{% if values.view == 'stations' %} selected{% endif %}>Bulgarian official stations &middot; named locations</option><option value="cities"{% if values.view == 'cities' %} selected{% endif %}>EEA city averages &middot; original view</option></select></div>
+            <div class="field"><label for="view">Comparison view</label><select id="view" name="view"><option value="stations"{% if values.view == 'stations' %} selected{% endif %}>Station / sensor locations</option><option value="cities"{% if values.view == 'cities' %} selected{% endif %}>City averages &middot; source-reported groupings</option></select></div>
             <div class="field"><label for="target">Search for</label><select id="target" name="target"><option value="locations"{% if values.target == 'locations' %} selected{% endif %}>Cleanest locations for the selected time</option><option value="day"{% if values.target == 'day' %} selected{% endif %}>Cleanest day within the selected dates</option><option value="hour"{% if values.target == 'hour' %} selected{% endif %}>Cleanest hour within the selected dates</option></select></div>
             <div class="field"><label for="objective">What should rank first?</label><select id="objective" name="objective"><option value="average"{% if values.objective == 'average' %} selected{% endif %}>Lowest pollution &middot; cleaner air</option><option value="reference_days"{% if values.objective == 'reference_days' %} selected{% endif %}>Most days within the daily reference</option><option value="improvement"{% if values.objective == 'improvement' %} selected{% endif %}>Largest improvement vs earlier stored history</option></select></div>
-            <div class="field"><label for="location">Location filter <span class="label-note">(optional)</span></label><select id="location" name="location"><option value="">All eligible locations</option><optgroup label="Official stations" data-view="stations">{% for station in snapshot.official_stations %}<option value="{{ station.id }}"{% if values.get('location') == station.id %} selected{% endif %}>{{ station.name }}</option>{% endfor %}</optgroup><optgroup label="City averages" data-view="cities">{% for city in snapshot.cities %}<option value="{{ city }}"{% if values.get('location') == city %} selected{% endif %}>{{ city }}</option>{% endfor %}</optgroup></select></div>
+            <div class="field"><label for="location">Location filter <span class="label-note">(optional)</span></label><select id="location" name="location"><option value="">All eligible locations</option><optgroup label="Source monitoring locations" data-view="stations">{% for station in snapshot.official_stations %}<option value="{{ station.id }}"{% if values.get('location') == station.id %} selected{% endif %}>{{ station.name }}</option>{% endfor %}</optgroup><optgroup label="City averages" data-view="cities">{% for city in snapshot.cities %}<option value="{{ city }}"{% if values.get('location') == city %} selected{% endif %}>{{ city }}</option>{% endfor %}</optgroup></select></div>
+            <div class="field"><label for="monitor-class">Monitor class</label><select id="monitor-class" name="monitor_class"><option value="all"{% if values.monitor_class == 'all' %} selected{% endif %}>All source-provided monitors/sensors</option><option value="reference"{% if values.monitor_class == 'reference' %} selected{% endif %}>Reference/government monitors only</option></select></div>
             <div class="field"><label for="profile">Daily reference <span class="label-note">(daily results only)</span></label><select id="profile" name="profile"><option value="who_2021"{% if values.profile == 'who_2021' %} selected{% endif %}>WHO 2021 guidance</option><option value="custom"{% if values.profile == 'custom' %} selected{% endif %}>My custom threshold</option></select></div>
             <div id="custom-field" class="field"{% if values.profile != 'custom' %} hidden{% endif %}><label for="threshold">Custom daily reference (&micro;g/m&sup3;)</label><input id="threshold" name="threshold" type="number" min="0" step="any" value="{{ values.get('threshold', '') }}"{% if values.profile != 'custom' %} disabled{% else %} required{% endif %}></div>
           </div>
+          <label class="check-line"><input type="checkbox" name="allow_partial_history" value="true"{% if values.get('allow_partial_history') %} checked{% endif %}> Allow explicitly labelled partial cached history while OpenAQ backfills. Coverage rules still apply.</label>
           <p id="definition-help" class="note" aria-live="polite">The normal definition is lowest average pollution. Reference-day and improvement rankings are different questions and require historical dates.</p>
-          <p class="note">Both views use Bulgaria's official measurements delivered through the EEA, not two independent sensor networks. Bulgarian station names and addresses come from ИАОС. Hour searches require actual hourly history; older daily averages cannot recreate it.</p>
+          <p class="note">The source controls which database is searched. City/station is a separate geographical view. OpenAQ can contain EEA-republished and community data; matching upstream readings are not independent confirmation. Hour searches require actual hourly history.</p>
           <p class="note">Settings apply to this search and its URL. Deployment defaults are in config\settings.toml.</p>
         </details>
         <div class="form-footer">
           <p>Less measured pollution means cleaner air. Coverage and source timestamps are always shown.</p>
-          <button id="search-button" type="submit"{% if not snapshot.ready %} disabled{% endif %}>{% if values.objective == 'improvement' %}Compare improvement{% elif values.objective == 'reference_days' %}Compare reference days{% else %}Find cleanest air{% endif %} <span aria-hidden="true">&rarr;</span></button>
+          <button id="search-button" type="submit"{% if not snapshot.application_ready %} disabled{% endif %}>{% if values.source == 'combined' %}Compare sources{% elif values.objective == 'improvement' %}Compare improvement{% elif values.objective == 'reference_days' %}Compare reference days{% else %}Find cleanest air{% endif %} <span aria-hidden="true">&rarr;</span></button>
         </div>
         <p id="search-change-notice" class="note" role="status" hidden>Selection changed. Press the search button to update the answer below.</p>
       </form>
@@ -101,13 +93,13 @@
       <p class="eyebrow">UNDERSTAND THE ANSWER</p>
       <h2 id="method-title">An honest comparison, not a black box.</h2>
       <div class="method-grid">
-        <article><span class="step-number">01</span><h3>Bulgarian official stations</h3><p>Names, addresses and coordinates identify real national monitors. Bulgaria's reported measurements are collected through the EEA. A station address does not mean every nearby street is measured.</p></article>
+        <article><span class="step-number">01</span><h3>Independent source histories</h3><p>EEA and OpenAQ each have their own local measurements, progress and archives. Names and addresses identify the contributing monitors; community sensors are labelled. Missing direct-Bulgarian readings are not replaced with EEA data.</p></article>
         <article><span class="step-number">02</span><h3>Comparable times</h3><p>Current results compare the same recent reported hour, not readings from unrelated times. Historical averages give each qualifying station and valid UTC day equal weight. Missing data is never zero.</p></article>
         <article><span class="step-number">03</span><h3>A clear definition</h3><p>Normally, the least pollution wins. Settings can instead find the cleanest day/hour, most days within a reference, or the largest relative improvement. These are labelled as different questions, not a universal score.</p></article>
       </div>
       <div class="method-note"><strong>A reference, not a safety certificate.</strong> WHO daily guidance is {{ "%g" | format(settings.reference.pm25_daily) }} &micro;g/m&sup3; for PM2.5 and {{ "%g" | format(settings.reference.pm10_daily) }} &micro;g/m&sup3; for PM10, with an annual 99th-percentile convention. Our descriptive city statistics do not establish WHO compliance, legal compliance or an absence of health risk. Annual guidelines are not applied to arbitrary periods.</div>
     </section>
   </main>
-  <footer class="site-footer shell"><span>Clean Air Finder <span class="footer-version">v{{ version }}</span></span><span>Data: <a href="https://eeadata.github.io/AQ.Portal/pages/download-data.html" target="_blank" rel="noopener">EEA</a>, &copy; European Commission, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> &middot; UTC &middot; Local-first</span></footer>
+  <footer class="site-footer shell"><span>Clean Air Finder <span class="footer-version">v{{ version }}</span></span><span>Source-specific attribution in each answer &middot; UTC &middot; Local-first &middot; No AI API</span></footer>
 </body>
 </html>

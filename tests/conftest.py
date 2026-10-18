@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import shutil
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from clean_air.database import connect, initialize, set_metadata
-from clean_air.settings import Options, Settings, load_settings, timestamp_now
+from clean_air.database import connect, initialize, rebuild_station_days, set_metadata
+from clean_air.provider_store import for_provider, prepare_sources
+from clean_air.settings import (
+    Options,
+    Settings,
+    load_settings,
+    months_before,
+    timestamp_now,
+    utc_today,
+)
+
+PRIVATE_MARKER = "test-only-private-operational-metadata-not-a-credential"
 
 
 @pytest.fixture
@@ -65,3 +75,38 @@ def raw_observation(
             value, aggregation, validity, 1, result_time, None, priority, 1,
         ),
     )
+
+
+@pytest.fixture
+def completed_sources(settings):
+    prepare_sources(settings)
+    beginning = months_before(utc_today(), 12).isoformat()
+    for provider, value in (("eea", 10), ("openaq", 20)):
+        configured = for_provider(settings, provider)
+        with connect(configured.database) as connection, connection:
+            for day in (beginning, (utc_today() - timedelta(days=1)).isoformat()):
+                raw_observation(connection, day=day, value=value, result_time=10)
+            rebuild_station_days(connection, "BG0001A")
+            set_metadata(connection, "initial_import_complete", True)
+            set_metadata(connection, "history_requested_start", beginning)
+            set_metadata(connection, "last_success", timestamp_now())
+            set_metadata(connection, "openaq_request_times", [12345])
+            set_metadata(connection, "private_operational_note", PRIVATE_MARKER)
+            connection.execute(
+                "INSERT INTO collection_runs(started,finished,status,message) VALUES (?,?,'completed',?)",
+                (timestamp_now(), timestamp_now(), PRIVATE_MARKER),
+            )
+            if provider == "openaq":
+                set_metadata(connection, "openaq_backfill_complete", True)
+                set_metadata(connection, "openaq_catalog", {
+                    "signature": "test", "updated": timestamp_now(),
+                    "sensors": [{"id": 1, "station": "BG0001A", "pollutant": "PM2.5",
+                                 "first": 0, "last": timestamp_now(), "license_windows": [[0, None]]}],
+                })
+                set_metadata(connection, "openaq_cursor:1", {
+                    "requested_start": 0, "lower": 0, "next_to": 0, "target_end": 1,
+                })
+                set_metadata(connection, "station_provider:BG0001A", {
+                    "provider": {"name": "Test provider"}, "licenses": [{"name": "CC BY"}],
+                })
+    return settings

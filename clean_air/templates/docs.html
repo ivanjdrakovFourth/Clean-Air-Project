@@ -5,21 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>API documentation &mdash; Clean Air Finder</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <script src="/static/theme.js"></script>
+  <script src="/static/ui.js" defer></script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header class="site-header shell"><a class="brand" href="/">clean air<span class="brand-light"> finder</span></a><nav><a href="/">Back to comparison</a><a href="/openapi.json">OpenAPI JSON</a></nav></header>
+{% include "navigation.html" %}
 <main class="shell methodology">
   <p class="eyebrow">LOCAL API &middot; VERSION {{ version }}</p>
   <h1>Small API. Clear answers.</h1>
-  <p>All endpoints are read-only, unauthenticated and bound to localhost. This documentation works offline; no external scripts, fonts or styles are required.</p>
+  <p>The service is unauthenticated and bound to localhost. Comparisons and table browsing are read-only; explicit local actions manage alerts, credentials and queued maintenance. Mutation endpoints reject foreign browser origins. This is a trusted local application, not an Internet-facing or multi-user security boundary. This documentation works offline.</p>
   <section class="search-card">
     <h2>GET /api/cleanest</h2>
     <p>Find the cleanest measured Bulgarian station or city. Omit both dates for the latest common recent reported hour. Set both dates for history; the end date is inclusive and both must be completed UTC days.</p>
     <div class="table-scroll"><table><thead><tr><th>Parameter</th><th>Meaning</th></tr></thead><tbody>
       <tr><th>start, end</th><td>Optional pair, YYYY-MM-DD. Leave both out for latest-hour comparisons. Stored history: {{ snapshot.available_start or 'backfill pending' }} to {{ snapshot.available_end or 'backfill pending' }}.</td></tr>
-      <tr><th>pollutant</th><td>PM2.5 or PM10. Configured default: {{ settings.options.comparison.default_pollutant }}. No automatic substitution.</td></tr>
-      <tr><th>view</th><td>stations: official Bulgarian names/addresses; cities: original EEA city-average view. Same official measurements, not separate independent sensor networks. Configured default: {{ settings.options.comparison.default_view }}.</td></tr>
+      <tr><th>source</th><td>eea, openaq, bg_direct or combined. Each provider has its own stored history. Configured default: {{ settings.options.sources.default }}. Unavailable sources never borrow another provider's observations.</td></tr>
+      <tr><th>sources</th><td>Repeat for combined mode, for example source=combined&amp;sources=eea&amp;sources=openaq. Results remain separate panels; unavailable selected sources have explicit error panels.</td></tr>
+      <tr><th>pollutant</th><td>PM2.5, PM10, NO2, O3, SO2 or CO, where the selected source has actual measurements. Configured default: {{ settings.options.comparison.default_pollutant }}. All values are in &micro;g/m&sup3;; no automatic pollutant substitution.</td></tr>
+      <tr><th>view</th><td>cities: daily station means grouped by reported city; stations: individual monitoring locations with available names, addresses and coordinates. A view is not a data source. Configured default: {{ settings.options.comparison.default_view }}.</td></tr>
+      <tr><th>monitor_class</th><td>all (default) or reference. Community and government/reference monitors are labelled. EEA observations republished through OpenAQ are not independent confirmation.</td></tr>
+      <tr><th>allow_partial_history</th><td>false by default. Set true explicitly to inspect eligible cached OpenAQ records during an unfinished backfill. The response warns that this is not complete source history. Verified bundled/restored windows can be queried without enabling partial results.</td></tr>
       <tr><th>objective</th><td>average (lowest pollution), reference_days (highest share of valid days within reference), or improvement (largest reduction versus stored earlier history, using the same station cohort and sufficient baseline). Non-average definitions need historical dates.</td></tr>
       <tr><th>target</th><td>locations (default), day (cleanest daily location/time within dates), or hour (cleanest hourly location/time). Time searches require dates and objective=average; hour requires actual qualifying hourly history.</td></tr>
       <tr><th>location</th><td>Optional exact station ID or city from the selected view. Omit to compare all eligible locations.</td></tr>
@@ -27,14 +33,23 @@
       <tr><th>threshold</th><td>Required only with profile=custom; finite, nonnegative daily concentration in &micro;g/m&sup3;.</td></tr>
     </tbody></table></div>
     <p><a href="/api/cleanest">Try the latest comparable reported hour</a></p>
-    {% if snapshot.available_start %}<p><a href="/api/cleanest?start={{ snapshot.available_start }}&amp;end={{ snapshot.available_end }}&amp;pollutant=PM10&amp;view=cities">Try the full stored period for PM10 city averages</a></p>{% endif %}
+    {% if snapshot.available_start and snapshot.available_end and snapshot.available_start <= snapshot.available_end %}<p><a href="/api/cleanest?start={{ snapshot.available_start }}&amp;end={{ snapshot.available_end }}&amp;pollutant=PM10&amp;view=cities">Try the completed stored period for PM10 city averages</a></p>{% endif %}
     <p>A successful response contains <code>winners</code>, ordered <code>rankings</code>, <code>excluded_locations</code> (also exposed as <code>excluded_cities</code> for compatibility), station addresses and coordinates when available, <code>period</code>, <code>reference</code>, <code>methodology</code>, a reproducible <code>policy_id</code>, attribution and warnings. Raw concentrations are not rounded before comparison. Time searches show the best 50 rows and disclose their total candidate count.</p>
+    <p>Combined responses instead contain <code>is_combined</code>, selected-source <code>panels</code> and <code>agreement</code> diagnostics. They do not invent one pooled winner. Diagnostic station values use a shared reported hour or exactly shared valid historical days. Ozone has no WHO 24-hour reference here; a custom daily reference is required for an O3 reference-day ranking.</p>
     <p>Errors use <code>{"error": {"code": "...", "message": "...", "details": ...}}</code>. Status 422 indicates an invalid request, unavailable period or insufficient coverage; status 503 indicates pending initial collection or unavailable local storage. Source outages do not prevent searches of previously imported history.</p>
   </section>
   <section class="methodology">
     <h2>Operations endpoints</h2>
     <ul>
       <li><a href="/api/status">GET /api/status</a>: collection progress, available history, freshness and worker state.</li>
+      <li><a href="/api/monitoring">GET /api/monitoring</a>: source health, city coverage, actual Prometheus queries and maintenance outcomes.</li>
+      <li><a href="/api/collection-notices">GET /api/collection-notices</a>: current startup session and unread per-source automatic update outcomes. The OK-only startup acknowledgement does not gate collection.</li>
+      <li><code>POST /api/settings/collection-desktop</code>: local optional Windows delivery preference for automatic source-update outcomes, using <code>{"enabled": true}</code> or false.</li>
+      <li><a href="/api/data">GET /api/data</a> and <code>GET /api/data/export</code>: source/table filters, pagination and CSV. No arbitrary SQL.</li>
+      <li><a href="/api/alerts">GET /api/alerts</a>: saved rules and persistent events. <code>POST /api/alerts</code>, <code>PUT /api/alerts/{id}</code> and <code>DELETE /api/alerts/{id}</code> manage rules through the local interface.</li>
+      <li><a href="/api/jobs">GET /api/jobs</a> and <code>POST /api/jobs</code>: source-specific backup, archive, restore, diagnostics and benchmark jobs. Queued is not the same as completed.</li>
+      <li><code>POST /api/sources/{source}/refresh</code>: request an enabled collector refresh; respects offline mode and source locks.</li>
+      <li><code>POST /api/settings/openaq-key</code>: store a Windows user-encrypted local API credential. Keys are not returned or bundled.</li>
       <li><a href="/health/live">GET /health/live</a>: application liveness.</li>
       <li><a href="/health/ready">GET /health/ready</a>: 200 after the initial import, otherwise 503.</li>
       <li><a href="/metrics">GET /metrics</a>: Prometheus metrics for API and collection health.</li>

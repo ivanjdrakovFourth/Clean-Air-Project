@@ -1,5 +1,47 @@
 # AI usage
 
+## Version 3 multi-source and operational UI
+
+The owner requested separately retained histories for EEA, OpenAQ and any usable
+direct Bulgarian feed; selectable combined comparisons; more pollutants;
+station provenance; themes; personal alerts; and non-developer monitoring/data
+maintenance menus. The original assignment was rechecked: prefill at least
+12 months, and archive records when older than 36 months.
+
+Primary-source requests and the actual returned metadata/measurements were used
+to implement OpenAQ v3, including permission windows, UTC hourly normalization,
+fixed-host header authentication, adaptive timeout windows and persisted
+per-key request pacing. The national direct feed still did not supply usable
+concentrations. It is disclosed as unavailable, not populated with copied EEA
+observations or placeholder zeros.
+
+Source databases, checkpoints and archives are physically separate. Optional
+matched-source diagnostics disclose common EEA upstream. Personal alert rules,
+baselines and events persist locally, with optional Windows delivery whose
+"requested" status is not misrepresented as proof that a popup was seen.
+Prometheus remains real; the normal Monitoring menu reads its APIs.
+
+The owner authorized publishing new prefilled source databases via Git LFS.
+Version 3 therefore adds sanitized, checksummed seeds and startup merge logic
+instead of replacing colleagues' live stores. Credentials, quota timestamps and
+personal alert state are not published. The API key supplied in conversation is
+kept encrypted locally and is never copied into this document or prompt history.
+Runtime binaries are unchanged.
+
+The owner subsequently specified acknowledgement-only startup notification and
+automatic replenishment after long absences, with separate provider completion
+messages. Collection begins independently of the browser acknowledgement.
+Source-specific notices and optional Windows delivery use the private local
+event store. Tests cover a long gap predating the new last-year boundary, so
+moving the configured window cannot silently discard missed time.
+
+Offline regression tests, native Edge UI exercises, source-query timing and
+fresh-copy checks validate the implementation. Tests exposed and corrected
+Windows SQLite backup-handle retention and missing empty checkpoints for
+inactive OpenAQ sensors; neither was hidden by a silent retry or fake record.
+Final evidence and limitations are in [VERIFICATION.md](VERIFICATION.md).
+This work remains AI-assisted, not an independent human audit.
+
 ## Version 2 source/search upgrade
 
 The owner requested clearer cleanest-air wording, official Bulgarian station

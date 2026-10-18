@@ -44,7 +44,8 @@ def test_host_specific_launchers_are_removed_but_native_helpers_remain(settings)
     assert (folder / "ruff.exe").exists()
 
 
-def test_handover_contains_portable_runtime_and_consistent_database_snapshot(settings):
+def test_handover_contains_portable_runtime_and_consistent_database_snapshot(completed_sources):
+    settings = completed_sources
     for relative in (
         ("python", "python.exe"), ("prometheus", "prometheus.exe"), ("manifest.json",)
     ):
@@ -61,6 +62,7 @@ def test_handover_contains_portable_runtime_and_consistent_database_snapshot(set
         names = set(bundle.namelist())
         assert "CleanAirFinder/runtime/python/python.exe" in names
         assert "CleanAirFinder/var/data/clean_air.sqlite3" in names
+        assert "CleanAirFinder/var/data/openaq.sqlite3" in names
         assert "CleanAirFinder/handover-manifest.json" in names
         assert "CleanAirFinder/LICENSE" in names
         assert "CleanAirFinder/Stop-CleanAir.cmd" in names
@@ -88,7 +90,8 @@ def test_start_launcher_explains_unresolved_lfs_runtime(settings):
     assert "not been fully downloaded" in result.stdout
 
 
-def test_small_portable_handover_omits_only_git_internals(settings):
+def test_small_portable_handover_omits_only_git_internals(completed_sources):
+    settings = completed_sources
     for parts in (("python", "python.exe"), ("prometheus", "prometheus.exe"), ("manifest.json",)):
         path = (settings.root / "runtime").joinpath(*parts)
         path.parent.mkdir(parents=True, exist_ok=True)

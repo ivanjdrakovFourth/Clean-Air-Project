@@ -13,7 +13,17 @@ from typing import Literal
 from pydantic import Field, model_validator
 
 from .database import connect, get_metadata
-from .settings import EEA_DATA_URL, POLLUTANTS, Settings, StrictModel, timestamp_now, utc_today
+from .settings import (
+    EEA_DATA_URL,
+    POLLUTANTS,
+    Pollutant,
+    Provider,
+    Settings,
+    SourceChoice,
+    StrictModel,
+    timestamp_now,
+    utc_today,
+)
 from .station_catalog import NATIONAL_URL
 
 TIME_RESULT_LIMIT = 50
@@ -22,7 +32,11 @@ TIME_RESULT_LIMIT = 50
 class Search(StrictModel):
     start: date | None = None
     end: date | None = None
-    pollutant: Literal["PM2.5", "PM10"] | None = None
+    pollutant: Pollutant | None = None
+    source: SourceChoice | None = None
+    sources: list[Provider] | None = Field(default=None, min_length=1, max_length=3)
+    monitor_class: Literal["all", "reference"] = "all"
+    allow_partial_history: bool = False
     profile: Literal["who_2021", "custom"] = "who_2021"
     threshold: float | None = Field(default=None, ge=0)
     view: Literal["cities", "stations"] | None = None
@@ -43,6 +57,12 @@ class Search(StrictModel):
             raise ValueError("A custom daily threshold is required for the custom profile.")
         if self.profile != "custom" and self.threshold is not None:
             raise ValueError("Custom thresholds must use the custom profile.")
+        if self.sources:
+            if self.source not in (None, "combined"):
+                raise ValueError("Choose combined mode when selecting multiple source stores.")
+            if len(set(self.sources)) != len(self.sources):
+                raise ValueError("Each source may only be selected once.")
+            self.source = "combined"
         return self
 
 
@@ -72,13 +92,19 @@ class Location:
     station_type: str | None = None
     area_type: str | None = None
     metadata_verified_on: str | None = None
+    upstream_provider: str | None = None
+    is_reference_monitor: bool | None = None
+    canonical_station: str | None = None
+    licenses: tuple[str, ...] = ()
 
 
-def status_snapshot(settings: Settings) -> dict:
+def _status_single(settings: Settings) -> dict:
     with connect(settings.database) as connection:
         complete = bool(get_metadata(connection, "initial_import_complete", False))
         run = connection.execute("SELECT * FROM collection_runs ORDER BY id DESC LIMIT 1").fetchone()
-        bounds = connection.execute("SELECT MIN(day), MAX(day) FROM station_days").fetchone()
+        bounds = connection.execute(
+            "SELECT (SELECT MIN(day) FROM station_days),(SELECT MAX(day) FROM station_days)"
+        ).fetchone()
         latest = get_metadata(connection, "latest_observation", None)
         stations = [
             dict(row) for row in connection.execute(
@@ -105,11 +131,36 @@ def status_snapshot(settings: Settings) -> dict:
             "official_stations": stations,
             "national_metadata_source": NATIONAL_URL,
             "direct_national_readings_available": False,
-            "measurement_provenance": "Bulgarian official measurements delivered by the EEA",
+            "measurement_provenance": {
+                "eea": "Bulgarian official measurements delivered by the EEA",
+                "openaq": "Separately collected OpenAQ observations; upstream provider and license are retained per location.",
+                "bg_direct": "Verified Bulgarian-direct archive observations only; no usable live feed is configured.",
+            }[settings.provider],
+            "data_source": settings.provider,
+            "backfill_complete": (
+                bool(get_metadata(connection, "openaq_backfill_complete", False))
+                if settings.provider == "openaq" else complete
+            ),
+            "available_pollutants": [
+                name for name, code in POLLUTANTS.items()
+                if connection.execute(
+                    "SELECT 1 FROM station_days WHERE pollutant=? LIMIT 1", (code,)
+                ).fetchone()
+            ],
         }
 
 
-def _locations(connection: sqlite3.Connection, view: str) -> tuple[dict[str, Location], dict[str, str]]:
+def _locations(
+    connection: sqlite3.Connection, view: str, monitor_class: str = "all"
+) -> tuple[dict[str, Location], dict[str, str]]:
+    provider = get_metadata(connection, "data_provider", "eea")
+    provenance = {
+        row["key"].removeprefix("station_provider:"): json.loads(row["value"])
+        for row in connection.execute("SELECT * FROM metadata WHERE key LIKE 'station_provider:%'")
+    }
+    allowed = None
+    if provider == "openaq" and monitor_class == "reference":
+        allowed = {station for station, value in provenance.items() if value.get("is_monitor")}
     if view == "cities":
         locations = {
             row[0]: Location(row[0], row[0], row[0])
@@ -119,15 +170,24 @@ def _locations(connection: sqlite3.Connection, view: str) -> tuple[dict[str, Loc
             row["id"]: row["city"]
             for row in connection.execute("SELECT id,city FROM stations WHERE city IS NOT NULL")
         }
+        if allowed is not None:
+            mapping = {station: city for station, city in mapping.items() if station in allowed}
     else:
         locations = {}
         for row in connection.execute(
             "SELECT m.*,s.city FROM station_metadata m JOIN stations s ON s.id=m.station_id"
         ):
+            if allowed is not None and row["station_id"] not in allowed:
+                continue
+            details = provenance.get(row["station_id"], {})
             locations[row["station_id"]] = Location(
                 row["station_id"], row["name"], row["city"], row["address"],
                 row["latitude"], row["longitude"], row["station_type"], row["area_type"],
                 row["verified_on"],
+                (details.get("provider") or {}).get("name") if provider == "openaq" else "EEA/Bulgaria",
+                details.get("is_monitor") if provider == "openaq" else True,
+                details.get("canonical_station") if provider == "openaq" else row["station_id"],
+                tuple(item["name"] for item in details.get("licenses", [])),
             )
         mapping = {station: station for station in locations}
     return locations, mapping
@@ -182,10 +242,12 @@ def _hour_samples(
 ) -> list[Sample]:
     query, arguments = _hour_query(code, start, end, starts=starts)
     rows = connection.execute(query + "SELECT * FROM hourly", arguments)
+    provider = get_metadata(connection, "data_provider", "eea")
     return [
         Sample(
             row["station_id"], datetime.fromtimestamp(row["started"], UTC).isoformat(),
-            row["value"], "validated hourly" if row["priority"] == 2 else "provisional hourly", 1,
+            row["value"], "OpenAQ reported hourly" if provider == "openaq"
+            else "validated hourly" if row["priority"] == 2 else "provisional hourly", 1,
         )
         for row in rows
     ]
@@ -236,10 +298,10 @@ def _mean(samples: list[Sample]) -> float:
     return sum(sample.mean for sample in samples) / len(samples)
 
 
-def _summary(location: Location, buckets: dict[str, list[Sample]], days: int, threshold: float) -> dict:
+def _summary(location: Location, buckets: dict[str, list[Sample]], days: int, threshold: float | None) -> dict:
     means = [_mean(samples) for samples in buckets.values()]
     all_samples = [sample for samples in buckets.values() for sample in samples]
-    below = sum(value <= threshold for value in means)
+    below = sum(value <= threshold for value in means) if threshold is not None else None
     return _result_row(
         location, sum(means) / len(means), len(buckets), days,
         {sample.station for sample in all_samples}, below,
@@ -250,7 +312,7 @@ def _summary(location: Location, buckets: dict[str, list[Sample]], days: int, th
 
 def _result_row(
     location: Location, mean: float, valid_days: int, requested_days: int,
-    stations: set[str], within: int, provisional: int, unspecified_capture: int,
+    stations: set[str], within: int | None, provisional: int, unspecified_capture: int,
 ) -> dict:
     return {
         "location": asdict(location),
@@ -263,8 +325,8 @@ def _result_row(
         "station_count": len(stations),
         "stations": sorted(stations),
         "days_at_or_below_reference": within,
-        "days_above_reference": valid_days - within,
-        "days_within_reference_percent": 100 * within / valid_days,
+        "days_above_reference": valid_days - within if within is not None else None,
+        "days_within_reference_percent": 100 * within / valid_days if within is not None else None,
         "provisional_station_days": provisional,
         "provider_hourly_coverage_unknown": unspecified_capture,
         "baseline_mean": None,
@@ -291,7 +353,7 @@ def _day_counts(
 def _period_rows(
     connection: sqlite3.Connection, code: int, start: str, end: str,
     coverage: float, qualifying: set[str], locations: dict[str, Location],
-    view: str, threshold: float, minimum: int, days: int,
+    view: str, threshold: float | None, minimum: int, days: int,
 ) -> list[dict]:
     identity = "city" if view == "cities" else "station_id"
     rows = connection.execute(
@@ -321,7 +383,7 @@ def _period_rows(
     return [
         _result_row(
             locations[row["location_id"]], row["mean"], row["valid_days"], days,
-            set(row["stations"].split(",")), row["within_reference"],
+            set(row["stations"].split(",")), row["within_reference"] if threshold is not None else None,
             row["provisional"], row["unspecified"],
         )
         for row in rows
@@ -330,7 +392,8 @@ def _period_rows(
 
 def _current(
     settings: Settings, connection: sqlite3.Connection, search: Search,
-    locations: dict[str, Location], mapping: dict[str, str], threshold: float,
+    locations: dict[str, Location], mapping: dict[str, str], threshold: float | None,
+    comparison_hour: int | None = None,
 ) -> tuple[list[dict], list[dict], dict]:
     now = timestamp_now()
     maximum_age = settings.options.comparison.current_max_age_hours * 3600
@@ -348,6 +411,8 @@ def _current(
     hours = sorted(
         (hour for hour, entries in by_hour.items() if len(entries) >= minimum), reverse=True
     )
+    if comparison_hour is not None:
+        hours = [hour for hour in hours if int(datetime.fromisoformat(hour).timestamp()) == comparison_hour]
     if not hours:
         raise ComparisonError(
             "NO_FRESH_COMPARABLE_HOUR",
@@ -377,7 +442,7 @@ def _current(
 
 def _historical(
     settings: Settings, connection: sqlite3.Connection, search: Search,
-    snapshot: dict, locations: dict[str, Location], mapping: dict[str, str], threshold: float,
+    snapshot: dict, locations: dict[str, Location], mapping: dict[str, str], threshold: float | None,
 ) -> tuple[list[dict], list[dict], dict]:
     start, end = search.start.isoformat(), search.end.isoformat()
     if not snapshot["available_start"] or start < snapshot["available_start"]:
@@ -545,7 +610,7 @@ def _historical(
     }
 
 
-def compare(settings: Settings, search: Search) -> dict:
+def resolved_search(settings: Settings, search: Search) -> Search:
     options = settings.options.comparison
     search = search.model_copy(update={
         "pollutant": search.pollutant or options.default_pollutant,
@@ -564,7 +629,23 @@ def compare(settings: Settings, search: Search) -> dict:
             "INCOMPATIBLE_DEFINITION",
             "Cleanest-day/hour searches use lowest concentration. Other definitions rank locations over a period.",
         )
-    snapshot = status_snapshot(settings)
+    threshold = search.threshold if search.profile == "custom" else settings.reference.daily_threshold(search.pollutant)
+    if threshold is None and search.objective == "reference_days":
+        raise ComparisonError(
+            "DAILY_REFERENCE_UNAVAILABLE",
+            "WHO has no 24-hour ozone concentration guideline. Select a custom daily reference "
+            "or use the lowest-concentration definition; an eight-hour guideline is not a daily limit.",
+        )
+    return search
+
+
+def _compare_single(
+    settings: Settings, search: Search, comparison_hour: int | None = None, *,
+    snapshot: dict | None = None,
+) -> dict:
+    options = settings.options.comparison
+    search = resolved_search(settings, search)
+    snapshot = _status_single(settings) if snapshot is None else snapshot
     if not snapshot["ready"]:
         raise ComparisonError(
             "HISTORY_NOT_READY",
@@ -573,7 +654,10 @@ def compare(settings: Settings, search: Search) -> dict:
         )
     threshold = search.threshold if search.profile == "custom" else settings.reference.daily_threshold(search.pollutant)
     with connect(settings.database) as connection:
-        locations, mapping = _locations(connection, search.view)
+        identity = get_metadata(connection, "data_provider", "eea")
+        if identity != settings.provider:
+            raise ComparisonError("SOURCE_IDENTITY_MISMATCH", "Source database identity does not match the selected source.", 503)
+        locations, mapping = _locations(connection, search.view, search.monitor_class)
         if search.location:
             if search.location not in locations:
                 raise ComparisonError(
@@ -582,7 +666,9 @@ def compare(settings: Settings, search: Search) -> dict:
             locations = {search.location: locations[search.location]}
             mapping = {station: identity for station, identity in mapping.items() if identity == search.location}
         if search.start is None:
-            rows, excluded, period = _current(settings, connection, search, locations, mapping, threshold)
+            rows, excluded, period = _current(
+                settings, connection, search, locations, mapping, threshold, comparison_hour
+            )
         else:
             rows, excluded, period = _historical(
                 settings, connection, search, snapshot, locations, mapping, threshold
@@ -595,6 +681,18 @@ def compare(settings: Settings, search: Search) -> dict:
         return (row["mean"],)
 
     rows.sort(key=lambda row: (*key(row), row["name"], row["time_start"] or 0))
+    with connect(settings.database) as connection:
+        station_locations, _ = _locations(connection, "stations", search.monitor_class)
+    for row in rows:
+        row["station_details"] = [
+            asdict(station_locations[station]) if station in station_locations
+            else {
+                "id": station, "name": station, "city": row["city"], "address": None,
+                "latitude": None, "longitude": None, "upstream_provider": settings.provider,
+                "is_reference_monitor": None,
+            }
+            for station in row["stations"]
+        ]
     previous = None
     rank = 0
     for index, row in enumerate(rows):
@@ -611,10 +709,14 @@ def compare(settings: Settings, search: Search) -> dict:
         "name": settings.reference.name if search.profile == "who_2021" else "Custom daily reference",
         "daily_threshold": threshold, "unit": "ug/m3",
         "averaging_period": "24-hour UTC mean",
-        "applicable": not hourly,
+        "applicable": not hourly and threshold is not None,
+        "unavailable_reason": (
+            "WHO has no 24-hour ozone guideline; the eight-hour reference is not applied to daily means."
+            if threshold is None else "Daily references are not applied to hourly readings." if hourly else None
+        ),
         "source": settings.reference.source if search.profile == "who_2021" else None,
     }
-    if hourly:
+    if hourly or threshold is None:
         for row in rows:
             row.update(
                 days_at_or_below_reference=None, days_above_reference=None,
@@ -631,6 +733,8 @@ def compare(settings: Settings, search: Search) -> dict:
     methodology = {
         "version": "bulgarian-location-search-v2", "timezone": "UTC",
         "view": search.view, "target": search.target, "objective": search.objective,
+        "monitor_class": search.monitor_class,
+        "source": settings.provider,
         "ranking": (
             "Highest percentage of valid days at or below the daily reference; lower mean breaks ties."
             if search.objective == "reference_days"
@@ -706,3 +810,15 @@ def compare(settings: Settings, search: Search) -> dict:
         },
         "warnings": warnings,
     }
+
+
+def compare(settings: Settings, search: Search) -> dict:
+    from .provider_search import compare_sources
+
+    return compare_sources(settings, search)
+
+
+def status_snapshot(settings: Settings, source: SourceChoice | None = None) -> dict:
+    from .provider_search import source_status
+
+    return source_status(settings, source)
