@@ -9,7 +9,12 @@ dates for history. The original city-average view is available in **Search
 settings**.
 
 **Source:** [Clean-Air-Project on GitHub](https://github.com/ivanjdrakovFourth/Clean-Air-Project)  
-**Portable download:** [GitHub Releases](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases)
+**Earlier portable downloads:** [GitHub Releases](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases)
+
+**Version 2 delivery:** existing complete installations receive this update with
+the ordinary Git pull below. The refreshed v2 portable ZIP is prepared locally
+for sharing; it has not replaced the earlier GitHub Release. No large binaries
+or database snapshot are uploaded as part of this source-only update.
 
 The repository contains the complete project source, portable runtime, installed
 Python packages and measurement database snapshot. Large binaries and the
