@@ -243,6 +243,8 @@ def merge_seed(settings: Settings) -> bool:
             archives = [dict(row) for row in connection.execute("SELECT * FROM seed.archives ORDER BY name")]
             if archives != entry.get("archives", []):
                 raise RuntimeError("Bundled archive entries do not match the seed database.")
+            if connection.execute("PRAGMA seed.foreign_key_check").fetchone():
+                raise RuntimeError("Bundled source data failed relationship verification.")
             for record in archives:
                 source_archive = verified_archive(folder / "archives" / settings.provider, record, settings.provider)
                 output = settings.archive_directory / record["name"]
@@ -257,41 +259,64 @@ def merge_seed(settings: Settings) -> bool:
                     temporary.replace(output)
                 output.with_suffix(".gz.sha256").write_text(record["sha256"] + "\n", encoding="ascii")
             existing = bool(connection.execute("SELECT 1 FROM observations LIMIT 1").fetchone())
+            untouched = not existing and not any(
+                connection.execute(f"SELECT 1 FROM main.{table} LIMIT 1").fetchone()
+                for table in (
+                    "cities", "stations", "station_metadata", "sampling_points", "import_files",
+                    "station_days", "collection_runs", "archives",
+                )
+            ) and not connection.execute(
+                "SELECT 1 FROM main.metadata WHERE key!='data_provider' LIMIT 1"
+            ).fetchone()
             if existing:
                 before = settings.var / "backups" / f"before-seed-{settings.provider}-{timestamp_now()}-{entry['sha256'][:12]}.sqlite3"
                 backup(settings.database, before)
-            LOGGER.info("Merging verified %s seed; existing/newer source observations are preserved.", settings.provider)
+            if untouched:
+                LOGGER.info("Initializing empty %s store from its verified bundled snapshot.", settings.provider)
+                with connect(path) as source:
+                    source.backup(connection)
+            else:
+                LOGGER.info("Merging verified %s seed; existing/newer source observations are preserved.", settings.provider)
             with connection:
-                connection.execute("INSERT OR IGNORE INTO cities SELECT * FROM seed.cities")
-                connection.execute("INSERT OR IGNORE INTO stations SELECT * FROM seed.stations")
-                connection.execute("INSERT OR IGNORE INTO station_metadata SELECT * FROM seed.station_metadata")
-                connection.execute("INSERT OR IGNORE INTO sampling_points SELECT * FROM seed.sampling_points")
-                connection.execute(
-                    "INSERT OR IGNORE INTO import_files(url,dataset,etag,last_success,rows_imported,window_start) "
-                    "SELECT url,dataset,etag,last_success,rows_imported,window_start FROM seed.import_files"
-                )
-                connection.execute("INSERT OR IGNORE INTO archives SELECT * FROM seed.archives")
-                connection.execute(
-                    """
-                    INSERT INTO observations (
-                        point_id,pollutant,started,ended,value,aggregation,validity,verification,
-                        result_time,data_capture,priority,file_id
+                if untouched:
+                    connection.execute(
+                        "DELETE FROM metadata WHERE key IN "
+                        "('last_success','openaq_backfill_complete','bg_direct_backfill_complete')"
                     )
-                    SELECT o.point_id,o.pollutant,o.started,o.ended,o.value,o.aggregation,
-                           o.validity,o.verification,o.result_time,o.data_capture,o.priority,t.id
-                    FROM seed.observations o JOIN seed.import_files f ON f.id=o.file_id
-                    JOIN main.import_files t ON t.url=f.url WHERE 1
-                    AND NOT EXISTS (
-                        SELECT 1 FROM main.observations local
-                        WHERE local.point_id=o.point_id AND local.pollutant=o.pollutant
-                          AND local.started=o.started AND local.aggregation=o.aggregation
-                          AND (local.priority>o.priority
-                               OR (local.priority=o.priority AND local.result_time>=o.result_time))
+                else:
+                    connection.execute("INSERT OR IGNORE INTO cities SELECT * FROM seed.cities")
+                    connection.execute("INSERT OR IGNORE INTO stations SELECT * FROM seed.stations")
+                    connection.execute("INSERT OR IGNORE INTO station_metadata SELECT * FROM seed.station_metadata")
+                    connection.execute("INSERT OR IGNORE INTO sampling_points SELECT * FROM seed.sampling_points")
+                    connection.execute(
+                        "INSERT OR IGNORE INTO import_files(url,dataset,etag,last_success,rows_imported,window_start) "
+                        "SELECT url,dataset,etag,last_success,rows_imported,window_start FROM seed.import_files"
                     )
-                    """ + OBSERVATION_CONFLICT
-                )
-                for station in connection.execute("SELECT DISTINCT station_id FROM seed.sampling_points").fetchall():
-                    rebuild_station_days(connection, station[0])
+                    connection.execute("INSERT OR IGNORE INTO archives SELECT * FROM seed.archives")
+                    connection.execute(
+                        """
+                        INSERT INTO observations (
+                            point_id,pollutant,started,ended,value,aggregation,validity,verification,
+                            result_time,data_capture,priority,file_id
+                        )
+                        SELECT o.point_id,o.pollutant,o.started,o.ended,o.value,o.aggregation,
+                               o.validity,o.verification,o.result_time,o.data_capture,o.priority,t.id
+                        FROM seed.observations o JOIN seed.import_files f ON f.id=o.file_id
+                        JOIN main.import_files t ON t.url=f.url WHERE 1
+                        AND NOT EXISTS (
+                            SELECT 1 FROM main.observations local
+                            WHERE local.point_id=o.point_id AND local.pollutant=o.pollutant
+                              AND local.started=o.started AND local.aggregation=o.aggregation
+                              AND (local.priority>o.priority
+                                   OR (local.priority=o.priority AND local.result_time>=o.result_time))
+                        )
+                        """ + OBSERVATION_CONFLICT
+                    )
+                    stations = connection.execute("SELECT DISTINCT station_id FROM seed.sampling_points").fetchall()
+                    for index, station in enumerate(stations, 1):
+                        rebuild_station_days(connection, station[0])
+                        if index % 10 == 0 or index == len(stations):
+                            LOGGER.info("%s bundled history: prepared %s/%s stations.", settings.provider, index, len(stations))
                 for row in connection.execute("SELECT * FROM seed.metadata").fetchall():
                     if shared_metadata(row["key"]) and row["key"] not in {
                         "initial_import_complete", "openaq_backfill_complete", "bg_direct_backfill_complete", "last_success",

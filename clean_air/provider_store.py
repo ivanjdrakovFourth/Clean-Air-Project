@@ -38,6 +38,14 @@ def prepare_sources(settings: Settings) -> None:
     for provider in PROVIDERS:
         configured = for_provider(settings, provider)
         configured.prepare_directories()
+        if configured.database.is_file():
+            with configured.database.open("rb") as handle:
+                if handle.read(64).startswith(b"version https://git-lfs.github.com/spec/v1"):
+                    raise RuntimeError(
+                        f"{configured.database.name} is a Git LFS pointer, not a downloaded database. "
+                        "Run git lfs install, then git lfs pull in the project folder, "
+                        "or use the complete portable Release ZIP."
+                    )
         initialize(configured.database)
         with connect(configured.database) as connection, connection:
             existing = get_metadata(connection, "data_provider", None)

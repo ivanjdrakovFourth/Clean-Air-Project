@@ -47,6 +47,41 @@ are not application dependencies or included runtime requirements.
 Use a writable local folder, not a network/synchronized drive, and do not run
 inside a ZIP. Windows/organization executable policies still apply.
 
+### Starting a GitHub checkout on another computer
+
+The repository contains large runtime/database files through **Git LFS**.
+From a new writable folder on Windows 10/11 x64:
+
+```powershell
+git lfs install
+git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
+Set-Location .\Clean-Air-Project
+git lfs pull
+.\Start-CleanAir.cmd
+```
+
+For an existing checkout, stop its app, run `git pull --ff-only` and
+`git lfs pull`, then start again. Do not discard local databases to resolve a
+Git conflict.
+
+**Keep the console open during first-run history preparation.** A fresh Git
+checkout must initialize/migrate its local stores before the browser opens.
+Progress appears in the console; slower disks or antivirus scanning can make
+this take several minutes. Later starts skip already applied seed snapshots.
+Empty source stores use SQLite's verified snapshot copy instead of rebuilding
+millions of existing aggregates; stores with local data retain the safe merge.
+
+GitHub's **Code -> Download ZIP** can contain LFS pointers instead of the actual
+binaries/data. Use `git clone` with Git LFS, or the prepared portable Release
+ZIP linked above. An OpenAQ key is not needed to start or query its bundled
+history; it is needed only for future OpenAQ collection.
+
+If startup reports that a port is occupied, close the other application or
+choose a free port in `config\settings.toml`; both the app and monitoring need
+their configured local ports. Windows blocking/quarantining an executable is
+different from a missing project file and needs checking against the computer's
+security policy.
+
 Offline use:
 
 ```powershell

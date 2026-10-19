@@ -1,5 +1,38 @@
 # Verification record
 
+## Fresh GitHub checkout startup follow-up (2026-10-19 UTC)
+
+Downloaded a new public `main` checkout and all **80 Git LFS payloads** into
+a separate folder containing spaces. Native Python/Prometheus signatures and
+both immutable source-database hashes matched the published files. No local
+OpenAQ credential was supplied.
+
+The published checkout did start: the first run became responsive within
+**247.8 seconds**, while preparing source histories before the browser opens.
+That delay could look like a failed launch, although it does not establish the
+cause of a different computer's unreported error.
+
+First-run initialization now copies a verified snapshot directly into a
+genuinely untouched source store rather than reimporting/reaggregating millions
+of rows. Any existing local records, metadata or collection state still use the
+preserving merge path. Source identity/hash/schema/count/bounds/relationship
+checks precede the copy; a twelve-month seed still cannot certify a larger
+requested history window. The console explains the preparation and shows
+station progress. An unresolved tracked database pointer now reports explicit
+Git LFS download instructions instead of a generic SQLite failure.
+
+With the same downloaded runtime/data restored to their original first-run
+state, the improved launcher responded within **107.7 seconds**. A second
+launch responded within **11.5 seconds**, without reapplying the seeds.
+Both independent source historical queries, the operational menus and bundled
+Prometheus succeeded. The disposable check used ports 8001/9091 to avoid
+interrupting the owner's running app; production defaults remain unchanged.
+
+**41 focused seed/portable/national regression tests and Ruff passed.**
+This was a fresh-folder test on the existing Windows machine, not a clean
+Windows VM or proof that every machine's security policy, port availability
+and Git LFS installation are correct.
+
 ## Version 3.0.1 Bulgarian CSV route correction
 
 The map/detail AJAX responses were not a complete test of the national portal's

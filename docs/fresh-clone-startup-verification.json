@@ -1,0 +1,11 @@
+{
+  "public_baseline_startup_seconds": 247.8,
+  "optimized_first_startup_seconds": 107.7,
+  "same_downloaded_runtime_and_seed_payloads": true,
+  "clean_first_run_restored": true,
+  "independent_source_history_queries": "passed",
+  "openaq_credential_supplied": false,
+  "normal_application_interrupted": false,
+  "second_start_upper_bound_seconds": 11.5,
+  "all_operational_menus": "passed"
+}

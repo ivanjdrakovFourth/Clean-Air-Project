@@ -85,6 +85,12 @@ def main() -> int:
             save_openaq_key(settings.root, getpass.getpass("OpenAQ API key (hidden): "))
             print("Local key encrypted for this Windows user. It is excluded from Git and handover ZIPs.")
             return 0
+        if args.command == "serve":
+            print(
+                "Preparing local source histories. The first Git checkout startup may take several "
+                "minutes; keep this window open. The web service starts after this preparation.",
+                flush=True,
+            )
         prepare_sources(settings)
         if hasattr(args, "source"):
             settings = for_provider(settings, args.source)

@@ -75,6 +75,47 @@ def test_first_start_loads_both_histories_without_credentials_and_is_idempotent(
         assert connection.execute("SELECT COUNT(*) FROM observations").fetchone()[0] == 0
 
 
+def test_empty_store_uses_verified_snapshot_without_recomputing_all_observations(published, monkeypatch):
+    target = recipient(published, copy_seeds=False)
+    prepare_sources(target)
+    shutil.copytree(published.root / "seed-data", target.root / "seed-data")
+    monkeypatch.setattr(
+        "clean_air.seeds.rebuild_station_days",
+        lambda *args: pytest.fail("A genuinely empty store can reuse the verified snapshot's aggregates."),
+    )
+    configured = for_provider(target, "openaq")
+    assert merge_seed(configured) is True
+    with connect(configured.database) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM observations").fetchone()[0] == 2
+        assert connection.execute("SELECT DISTINCT mean FROM station_days").fetchone()[0] == 20
+        assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        assert not connection.execute("SELECT 1 FROM metadata WHERE key='last_success'").fetchone()
+        assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+
+
+def test_even_an_empty_observation_store_preserves_its_existing_local_state(published, monkeypatch):
+    target = recipient(published, copy_seeds=False)
+    prepare_sources(target)
+    configured = for_provider(target, "openaq")
+    with connect(configured.database) as connection, connection:
+        set_metadata(connection, "local-note", "Preserve this installation state")
+    shutil.copytree(published.root / "seed-data", target.root / "seed-data")
+    assert merge_seed(configured) is True
+    with connect(configured.database) as connection:
+        assert json.loads(connection.execute("SELECT value FROM metadata WHERE key='local-note'").fetchone()[0]) == "Preserve this installation state"
+
+
+def test_legacy_working_database_lfs_pointer_has_a_clear_download_instruction(published):
+    target = recipient(published, copy_seeds=False)
+    target.database.parent.mkdir(parents=True, exist_ok=True)
+    target.database.write_text(
+        "version https://git-lfs.github.com/spec/v1\noid sha256:" + "0" * 64 + "\nsize 123\n",
+        encoding="ascii",
+    )
+    with pytest.raises(RuntimeError, match="git lfs pull"):
+        prepare_sources(target)
+
+
 @pytest.mark.parametrize("local_revision", [10, 11])
 def test_update_preserves_local_equal_or_newer_revisions_and_maps_file_ids(published, local_revision):
     target = recipient(published, copy_seeds=False)
