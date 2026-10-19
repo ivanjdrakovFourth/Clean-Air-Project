@@ -1,18 +1,20 @@
 # Clean Air Project - Prompt history
 
-> Historical record: the exact-prompt tables below cover the original first
+> Historical record: the prompt tables below cover the original first
 > twenty written prompts, not the later version 3 conversation. Version 3's
 > source isolation, OpenAQ, alerts, monitoring, themes and prefilled-delivery
 > decisions are summarized in [AI_USAGE.md](AI_USAGE.md). Credentials supplied
-> in later conversation are intentionally not reproduced.
+> in later conversation are intentionally not reproduced. Personal account URLs
+> and identifying details are redacted in version 3.0.2.
 
 This document separates the written conversation into:
 
 1. **Build:** prompts 1-11.
 2. **Issues after the build and other follow-ups:** prompts 12-20.
 
-The prompt wording, spelling, capitalization and punctuation are preserved,
-including typos and repeated words. Paragraph breaks inside table cells are
+Except for identifying details explicitly redacted for privacy, prompt wording,
+spelling, capitalization and punctuation are preserved, including typos and
+repeated words. Paragraph breaks inside table cells are
 represented with `<br><br>`. The action summaries are separate from the prompts.
 
 Automatically inserted timestamps, IDE selections and browser attachments are
@@ -43,7 +45,7 @@ explanations, as well as issues. Not every entry resulted in a code change.
 | # | Your exact prompt | What I did based on that prompt |
 |---|---|---|
 | 12 | Can you please check for me quickly based on the actual requirements we have, you know that were given to us? Have you? Covered all the requirements. Check them one by one, give me a list and tell me. | <ul><li>Compared the original assignment with the actual code, documentation and current database.</li><li>Reported three coverage-gap dates, automatic archiving's dependency on successful collection, and the missing published repository URL.</li><li>Explained local validation/deployment caveats. This was an audit; I did not fix the identified data or archive issues during it.</li></ul> |
-| 13 | I created a new public git repository and I want to upload the whole project there. Please upload the whole project, the root file, everything 1 commit. Thank you. https://github.com/ivanjdrakovFourth/Clean-Air-Project.git | <ul><li>After your packaging selection, published 54 source/configuration/documentation/test files at the repository root in one snapshot commit, c2e897a.</li><li>Published the complete portable ZIP and checksum as GitHub Release v1.0.0, then verified the uploaded asset.</li><li>Preserved the five development commits locally and excluded internal Git metadata and live/generated state from the public ZIP.</li></ul> |
+| 13 | I created a new public git repository and I want to upload the whole project there. Please upload the whole project, the root file, everything 1 commit. Thank you. [repository URL redacted] | <ul><li>After your packaging selection, published 54 source/configuration/documentation/test files at the repository root in one snapshot commit, c2e897a.</li><li>Published the complete portable ZIP and checksum as GitHub Release v1.0.0, then verified the uploaded asset.</li><li>Preserved the five development commits locally and excluded internal Git metadata and live/generated state from the public ZIP.</li></ul> |
 | 14 | Did you upload everything? I want the complete portable Windows release to be there, not just the Github repository, source files and configurations and all that. I want everything to be up in git. | <ul><li>Rechecked the complete Release ZIP and clarified the difference between Releases and files tracked in main.</li><li>After your approvals, added the runtime and database through Git LFS: 2,683 tracked files, including 78 LFS objects, while replacing main with one commit, 87cbb8f.</li><li>Reached 69 passing tests and verified a fresh GitHub LFS checkout containing actual executables and a valid database.</li></ul> |
 | 15 | is everything now there all the runtime stuff and all? | <ul><li>Confirmed that the required runtime, packages, monitoring tools, database and application files were uploaded.</li><li>Reiterated the distinction between Git LFS retrieval and the ordinary portable Release ZIP.</li><li>Made no further project changes.</li></ul> |
 | 16 | What is the command to pool everything including the umm. Portable zip including the LFS. What is the git command so I pull everything? | <ul><li>Supplied PowerShell commands for cloning, pulling and retrieving LFS objects.</li><li>Explained that Git does not download GitHub Release assets.</li><li>Provided a separate portable-ZIP download command; these were instructions, not commands I executed for you.</li></ul> |

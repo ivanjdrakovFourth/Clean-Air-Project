@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 from dataclasses import replace
+from datetime import UTC, datetime
 
 import pytest
 from conftest import PRIVATE_MARKER, raw_observation
@@ -196,6 +197,40 @@ def test_pending_sensor_cursor_prevents_false_complete_publication(published):
         set_metadata(connection, "openaq_cursor:1", {"lower": 0, "next_to": 1})
     with pytest.raises(RuntimeError, match="not finished"):
         build_seeds(published)
+
+
+def test_completed_history_can_be_snapshotted_during_a_later_incremental_refresh(published):
+    start = int(datetime.combine(months_before(utc_today(), 12), datetime.min.time(), UTC).timestamp())
+    with connect(for_provider(published, "openaq").database) as connection, connection:
+        set_metadata(connection, "openaq_cursor:1", {
+            "requested_start": start, "history_floor": start,
+            "lower": start + 300 * 86400, "next_to": start + 310 * 86400,
+        })
+        connection.execute(
+            "INSERT INTO collection_runs(started,status,message) VALUES (1,'running','Incremental refresh')"
+        )
+    manifest = build_seeds(published)
+    assert manifest["sources"]["openaq"]["history_complete"] is True
+
+
+def test_failed_initial_import_is_not_certified_without_a_completed_history_record(published):
+    with connect(for_provider(published, "openaq").database) as connection, connection:
+        connection.execute("UPDATE collection_runs SET status='failed'")
+    with pytest.raises(RuntimeError, match="not finished"):
+        build_seeds(published)
+
+
+def test_expanded_eea_history_is_not_complete_merely_because_the_requested_start_was_saved(published):
+    values = published.options.model_dump()
+    values["collection"]["history_months"] = 36
+    settings = replace(published, options=Options.model_validate(values))
+    with connect(settings.database) as connection, connection:
+        set_metadata(connection, "history_requested_start", months_before(utc_today(), 36).isoformat())
+        connection.execute(
+            "INSERT INTO collection_runs(started,status,message) VALUES (1,'running','Expanding history')"
+        )
+    with pytest.raises(RuntimeError, match="eea"):
+        build_seeds(settings)
 
 
 def test_lfs_pointer_has_a_clear_download_instruction(published):

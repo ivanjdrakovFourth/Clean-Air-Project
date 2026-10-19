@@ -68,8 +68,7 @@ def verify_complete_history(settings: Settings, path: Path | None = None) -> Non
             raise RuntimeError("The measurement snapshot belongs to another source.")
         complete = bool(get_metadata(connection, "initial_import_complete", False))
         if settings.provider == "bg_direct":
-            cycle = get_metadata(connection, "bg_csv_cycle", {})
-            complete = complete and bool(get_metadata(connection, "bg_direct_backfill_complete", False)) and not cycle.get("pending")
+            complete = complete and bool(get_metadata(connection, "bg_direct_backfill_complete", False))
         months = (
             settings.options.openaq.history_months or settings.options.collection.history_months
             if settings.provider == "openaq" else settings.options.collection.history_months
@@ -85,22 +84,27 @@ def verify_complete_history(settings: Settings, path: Path | None = None) -> Non
             for sensor in sensors:
                 cursor = get_metadata(connection, f"openaq_cursor:{sensor['id']}", None)
                 floor = max(required_epoch, sensor["first"] // 3600 * 3600)
+                # A later revision window must not invalidate already completed initial history.
                 if (
-                    not cursor or cursor["next_to"] > cursor["lower"]
-                    or cursor["requested_start"] > required_epoch
+                    not cursor
+                    or (cursor["next_to"] > cursor["lower"] and cursor["lower"] <= floor)
+                    or cursor.get("requested_start", required_epoch + 1) > required_epoch
                     or cursor.get("history_floor", cursor["lower"]) > floor
                 ):
                     complete = False
-        run = connection.execute(
-            "SELECT status FROM collection_runs ORDER BY id DESC LIMIT 1"
+        completed_run = connection.execute(
+            "SELECT 1 FROM collection_runs WHERE status='completed' LIMIT 1"
         ).fetchone()
         bundled = get_metadata(connection, "bundled_seed_info", {})
         requested = get_metadata(connection, "history_requested_start", None)
         if not requested or requested > required_start.isoformat():
             complete = False
-        if not complete or (run and run["status"] != "completed") or (
-            not run and not bundled.get("history_complete")
-        ):
+        if settings.provider == "eea":
+            earliest = connection.execute("SELECT MIN(day) FROM station_days").fetchone()[0]
+            active_start = max(required_start, months_before(utc_today(), settings.options.retention.active_months))
+            if not earliest or earliest > active_start.isoformat():
+                complete = False
+        if not complete or (not completed_run and not bundled.get("history_complete")):
             raise RuntimeError(
                 f"{settings.provider} historical collection has not finished for the configured window. "
                 "Ready-to-use publication was refused."

@@ -1,32 +1,41 @@
 {
   "format": "clean-air-source-seeds-v1",
-  "created": 1792361685,
+  "created": 1792414277,
   "sources": {
     "eea": {
       "file": "eea.sqlite3",
       "schema": 3,
-      "observations": 1006236,
+      "observations": 1008066,
       "start": "2025-10-16",
-      "end": "2026-10-18",
+      "end": "2026-10-19",
       "requested_start": "2025-10-18",
       "history_complete": true,
-      "sha256": "61fbe80981deef49914eced4d4134012cde3a7a75503e336c5008a469a3ff780",
+      "sha256": "f804247d18fc4e0d3e9b1f754b441801984cfd47c2e97e7e7534f674cd0678ed",
       "archives": []
     },
     "openaq": {
       "file": "openaq.sqlite3",
       "schema": 3,
-      "observations": 1952195,
+      "observations": 1955779,
       "start": "2025-10-18",
-      "end": "2026-10-18",
+      "end": "2026-10-19",
       "requested_start": "2025-10-18",
       "history_complete": true,
-      "sha256": "7fe466413d330509695011d0194c85d564233bde420777e1d8b301d65b1e724d",
+      "sha256": "3095415949d068ff8835608367c7485ee7d78dd0036c5f01e4b5c7be2d4154bf",
+      "archives": []
+    },
+    "bg_direct": {
+      "file": "bg_direct.sqlite3",
+      "schema": 3,
+      "observations": 1108632,
+      "start": "2025-10-18",
+      "end": "2026-10-19",
+      "requested_start": "2025-10-18",
+      "history_complete": true,
+      "sha256": "f56cd84d5c9486790d6e887d5438f814d16b686b0a0abd1c2bda8dcd96eafbf0",
       "archives": []
     }
   },
-  "unavailable": {
-    "bg_direct": "The genuine national CSV connector is enabled in version 3.0.1. Its initial station history is being collected; a complete national seed is not claimed by this earlier EEA/OpenAQ snapshot."
-  },
+  "unavailable": {},
   "credential_notice": "No API credential, personal alert settings or API-quota history is included."
 }

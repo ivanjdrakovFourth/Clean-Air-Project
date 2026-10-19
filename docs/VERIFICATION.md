@@ -1,5 +1,31 @@
 # Verification record
 
+## Version 3.0.2 anonymized delivery
+
+Personal identifiers were removed from project-controlled Markdown and PDF
+text, link targets and metadata. A complete tracked-file byte scan and decoded
+PDF checks are used in addition to checking visible text. Required provider
+attribution and third-party software licenses are preserved.
+
+The release includes separately collected, complete initial histories for all
+three providers:
+
+| Source | Raw observations in the delivery snapshot |
+|---|---:|
+| EEA | 1,008,066 |
+| OpenAQ | 1,955,779 |
+| Bulgarian national CSV | 1,108,632 |
+
+Verified initial history remains usable while later incremental updates are
+running. Snapshot publication still rejects incomplete initial sensor history,
+an expanded history window not actually stored, or missing evidence of a
+completed initial import.
+
+**224 automated tests and Ruff passed.** The portable artifact excludes local
+credentials, private alert state, logs, temporary folders and internal Git
+metadata. New release commit/tag identities are neutral; existing hosting
+account ownership and earlier commit metadata are not contents of the ZIP.
+
 ## Fresh GitHub checkout startup follow-up (2026-10-19 UTC)
 
 Downloaded a new public `main` checkout and all **80 Git LFS payloads** into

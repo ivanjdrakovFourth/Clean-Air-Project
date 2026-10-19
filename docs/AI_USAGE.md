@@ -1,5 +1,15 @@
 # AI usage
 
+## Version 3.0.2 privacy and delivery update
+
+Personal names, email addresses and identifying account references were removed
+from project-controlled documents and PDF exports. Current clone instructions
+use the repository URL supplied by the reader rather than embedding a personal
+account. Required data-owner attribution and software licenses remain intact.
+The release includes independent prefilled source histories and the existing
+portable runtime. GitHub account ownership and previous commit metadata are
+separate from the contents of the delivered files.
+
 ## Version 3.0.1 national-route correction
 
 The owner reported that the Bulgarian-direct source could not update.
@@ -78,9 +88,8 @@ This project was developed with an AI assistant using **Copilot SDK in VS Code**
 
 ### Version 2 publication scope
 
-The owner explicitly selected
-[ivanjdrakovFourth/Clean-Air-Project](https://github.com/ivanjdrakovFourth/Clean-Air-Project)
-for the final update and requested a small ordinary Git pull for colleagues
+The owner explicitly selected the primary project repository for the final
+update and requested a small ordinary Git pull for colleagues
 who already have the complete runtime. This update therefore publishes code,
 configuration, tests and Markdown evidence without changing the committed
 runtime or SQLite LFS objects. Each installation backs up/migrates its own
@@ -133,8 +142,7 @@ milestone commits. Initial implementation and verification were completed locall
 before the later public-publication request.
 
 Public publication was subsequently explicitly requested by the owner: one
-source snapshot commit at
-[Clean-Air-Project](https://github.com/ivanjdrakovFourth/Clean-Air-Project), plus
+source snapshot commit in the primary project repository, plus
 the complete portable application as a GitHub Release. Original development
 history is retained on a local backup branch. Public release packages omit
 internal Git metadata, live logs, credentials and temporary state.
@@ -145,8 +153,8 @@ the owner approved replacing the published snapshot to keep `main` at one
 commit. The earlier public snapshot and development milestones remain preserved
 locally, and the existing portable Release remains available.
 
-The owner then requested publication of the complete runnable project at
-[Clean-Air-Repository](https://github.com/lemargina/Clean-Air-Repository). That
+The owner then requested publication of the complete runnable project in
+an additional repository. That
 checkout includes the source, bundled runtime, Python packages and database
 snapshot, with large binaries and the database stored through Git LFS. Logs,
 credentials, caches and other transient local state remain excluded.

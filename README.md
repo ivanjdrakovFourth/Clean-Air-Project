@@ -1,4 +1,4 @@
-# Clean Air Finder - Version 3
+# Clean Air Finder - Version 3.0.2
 
 **Which measured Bulgarian city had the cleanest air for the selected time?**
 
@@ -6,15 +6,15 @@ A portable Windows application with source-specific local history, six
 pollutants, source comparisons, an in-app Data Explorer, friendly monitoring,
 configurable alerts and light/dark themes.
 
-**Repository:** [ivanjdrakovFourth/Clean-Air-Project](https://github.com/ivanjdrakovFourth/Clean-Air-Project)
-
-**Complete portable download:** [Version 3.0.1 release](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases/tag/v3.0.1).
+**Complete portable download:** open this repository's **Releases** page and
+choose **Version 3.0.2**, then download the complete Windows ZIP asset.
 Use the prepared Windows ZIP, not GitHub's generic source ZIP, for an
 extract-and-run package without a Git LFS installation.
-Both the current Git checkout and the 3.0.1 ZIP contain the national-CSV
-connector fix. The older 3.0.0 ZIP predates it. The 3.0.1 ZIP includes the
-national records already downloaded and resumes the remaining station backfill
-automatically; it does not falsely mark that initial national history complete.
+Both the current Git checkout and the 3.0.2 ZIP contain the working national-CSV
+connector and all three source snapshots. Subsequent missing dates are collected
+automatically while the app runs. Version 3.0.2 removes personal identifiers
+from project-controlled documents and document exports; required third-party
+attribution remains intact.
 
 ## 1. Start and stop
 
@@ -54,7 +54,8 @@ From a new writable folder on Windows 10/11 x64:
 
 ```powershell
 git lfs install
-git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
+$RepositoryUrl = Read-Host "Paste this repository's HTTPS clone URL from its Code button"
+git clone $RepositoryUrl Clean-Air-Project
 Set-Location .\Clean-Air-Project
 git lfs pull
 .\Start-CleanAir.cmd
@@ -320,7 +321,7 @@ Existing complete checkout:
 
 ```powershell
 .\Stop-CleanAir.cmd
-git pull --ff-only https://github.com/ivanjdrakovFourth/Clean-Air-Project.git main
+git pull --ff-only
 git lfs pull
 .\Start-CleanAir.cmd
 ```
@@ -332,7 +333,8 @@ independently. Initial clones also need Git LFS:
 
 ```powershell
 git lfs install
-git clone https://github.com/ivanjdrakovFourth/Clean-Air-Project.git
+$RepositoryUrl = Read-Host "Paste this repository's HTTPS clone URL from its Code button"
+git clone $RepositoryUrl Clean-Air-Project
 Set-Location .\Clean-Air-Project
 git lfs pull
 .\Start-CleanAir.cmd
@@ -373,9 +375,10 @@ More: [source research](docs/DATA_SOURCES.md), [methodology](docs/METHODOLOGY.md
 [operations](docs/OPERATIONS.md), [licenses](docs/THIRD_PARTY.md),
 [AI usage](docs/AI_USAGE.md) and [verification](docs/VERIFICATION.md).
 
-The repository also preserves the supplied PDF document exports unchanged for
-completeness. They are historical exports, not regenerated version 3 manuals;
-the current Markdown documents and application interface are authoritative.
+The repository includes the supplied PDF document exports for completeness.
+Personal identifiers and identifying links have been removed from those
+historical exports. They are not regenerated version 3 manuals; the current
+Markdown documents and application interface are authoritative.
 
 With more time: obtain a complete licensed direct Bulgarian measurement feed;
 review geographical grouping/station types with domain experts; add external
