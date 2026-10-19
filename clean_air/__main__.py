@@ -62,7 +62,7 @@ def main() -> int:
     handover = commands.add_parser("handover", help="Create a verified ZIP with runtime and database snapshot")
     handover.add_argument(
         "--without-git", action="store_true",
-        help="Omit local Git/LFS object storage from a smaller runnable handover",
+        help="Compatibility option; public handovers always omit private Git metadata",
     )
     commands.add_parser("test", help="Run lint and the offline automated tests")
     performance = commands.add_parser("benchmark", help="Measure real-data query performance")
@@ -155,7 +155,7 @@ def main() -> int:
             print(json.dumps(build_seeds(settings), indent=2))
         elif args.command == "handover":
             with instance_lock(settings):
-                print(make_handover(settings, include_git=not args.without_git))
+                print(make_handover(settings))
         elif args.command == "benchmark":
             if not 1 <= args.iterations <= 10000:
                 raise ValueError("--iterations must be between 1 and 10000")

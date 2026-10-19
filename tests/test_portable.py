@@ -103,3 +103,17 @@ def test_small_portable_handover_omits_only_git_internals(completed_sources):
         assert not any(name.startswith("CleanAirFinder/.git/") for name in bundle.namelist())
         assert "CleanAirFinder/runtime/python/python.exe" in bundle.namelist()
         assert "CleanAirFinder/var/data/clean_air.sqlite3" in bundle.namelist()
+
+
+def test_default_handover_does_not_leak_private_repository_metadata(completed_sources):
+    settings = completed_sources
+    for parts in (("python", "python.exe"), ("prometheus", "prometheus.exe"), ("manifest.json",)):
+        path = (settings.root / "runtime").joinpath(*parts)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("fixture", encoding="utf-8")
+    (settings.root / ".git").mkdir()
+    (settings.root / ".git" / "config").write_text("private checkout identity", encoding="utf-8")
+    output = make_handover(settings)
+    with zipfile.ZipFile(output) as bundle:
+        assert not any(name.startswith("CleanAirFinder/.git/") for name in bundle.namelist())
+        assert "CleanAirFinder/var/data/openaq.sqlite3" in bundle.namelist()

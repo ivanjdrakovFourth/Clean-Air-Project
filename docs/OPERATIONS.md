@@ -263,9 +263,10 @@ explicit failure instead of packaging files while a writer is active. It refuses
 unfinished EEA/OpenAQ history, checks consistent source snapshots, removes local
 quota/operational metadata and collection-run logs, and vacuums shared copies.
 Personal alerts, credentials, caches, logs, untracked user PDFs and temporary
-state are excluded. The local handover archive includes `.git`
-history when present in the checkout, but not transient state. Public GitHub
-release archives omit internal Git metadata. Generated monitoring paths are regenerated
+state are excluded. Public handover archives omit `.git` history and local
+repository configuration by default, preventing checkout identities from being
+redistributed. The older `--without-git` option remains compatible but is no
+longer required. Generated monitoring paths are regenerated
 after extraction. Python uses relative module paths, not a copied virtual
 environment's absolute paths.
 Build-machine-specific pip console launchers are omitted; commands use the

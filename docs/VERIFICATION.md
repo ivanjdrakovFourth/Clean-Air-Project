@@ -21,10 +21,11 @@ running. Snapshot publication still rejects incomplete initial sensor history,
 an expanded history window not actually stored, or missing evidence of a
 completed initial import.
 
-**224 automated tests and Ruff passed.** The portable artifact excludes local
+**225 automated tests and Ruff passed.** The portable artifact excludes local
 credentials, private alert state, logs, temporary folders and internal Git
 metadata. New release commit/tag identities are neutral; existing hosting
 account ownership and earlier commit metadata are not contents of the ZIP.
+Public handover creation also omits private Git metadata by default.
 
 ## Fresh GitHub checkout startup follow-up (2026-10-19 UTC)
 

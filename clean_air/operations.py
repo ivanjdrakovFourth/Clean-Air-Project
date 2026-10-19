@@ -134,7 +134,7 @@ def open_browser_when_ready(port: int) -> None:
     threading.Thread(target=open_page, name="open-browser", daemon=True).start()
 
 
-def make_handover(settings: Settings, include_git: bool = True) -> Path:
+def make_handover(settings: Settings, include_git: bool = False) -> Path:
     runtime = settings.root / "runtime"
     for required in (Path("python") / "python.exe", Path("prometheus") / "prometheus.exe", Path("manifest.json")):
         if not (runtime / required).is_file():
