@@ -8,11 +8,13 @@ configurable alerts and light/dark themes.
 
 **Repository:** [ivanjdrakovFourth/Clean-Air-Project](https://github.com/ivanjdrakovFourth/Clean-Air-Project)
 
-**Complete portable download:** [Version 3.0.0 release](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases/tag/v3.0.0).
+**Complete portable download:** [Version 3.0.1 release](https://github.com/ivanjdrakovFourth/Clean-Air-Project/releases/tag/v3.0.1).
 Use the prepared Windows ZIP, not GitHub's generic source ZIP, for an
 extract-and-run package without a Git LFS installation.
-The 3.0.1 national-CSV connector fix is in the Git checkout; the older 3.0.0
-ZIP predates that connector.
+Both the current Git checkout and the 3.0.1 ZIP contain the national-CSV
+connector fix. The older 3.0.0 ZIP predates it. The 3.0.1 ZIP includes the
+national records already downloaded and resumes the remaining station backfill
+automatically; it does not falsely mark that initial national history complete.
 
 ## 1. Start and stop
 
